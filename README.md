@@ -1,10 +1,10 @@
 ### Akira MMD | The Best Motion Capture Web App based on mediapipe
 ### Features
-[] - Vmd Export
-[] - Model Import
-[] - Scene Creating
-[] - Theme support
+- [ ] - Vmd Export
+- [ ] - Model Import
+- [ ] - Scene Creating
+- [ ] - Theme support
 ### Languages Support
-[] - Russian
-[] - English
-[] - Japan
+- [ ] - Russian
+- [ ] - English
+- [ ] - Japan
