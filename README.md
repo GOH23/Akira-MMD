@@ -8,3 +8,6 @@
 - [ ] - Russian
 - [ ] - English
 - [ ] - Japan
+### Other Support
+- [ ] - Mobile app [Idea]
+- [ ] - Support other extention
