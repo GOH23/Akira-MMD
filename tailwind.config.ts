@@ -9,8 +9,11 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
+        BackgroundColor: "var(--bg-color)",
+        ForegroundColor: "var(--text-color)",
+        BackgroundButton: "var(--bg-button-color)",
+        BackgroundHoverButton: "var(--bg-hover-button-color)",
+        MenuItemBg: "var(--menu-layout-bg)"
       },
     },
   },
