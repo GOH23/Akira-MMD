@@ -4,6 +4,11 @@
 - [ ] - Model Import
 - [ ] - Scene Creating
 - [ ] - Theme support
+### Themes Support
+- [X] - Dark Theme
+- [X] - Purple Theme
+- [ ] - White Theme
+- [ ] - Custom Theme
 ### Languages Support
 - [ ] - Russian
 - [ ] - English
