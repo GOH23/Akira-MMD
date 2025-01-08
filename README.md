@@ -15,4 +15,5 @@
 - [ ] - Japan
 ### Other Support
 - [ ] - Mobile app [Idea]
+- [ ] - Add other themes for scene
 - [ ] - Support other extention
