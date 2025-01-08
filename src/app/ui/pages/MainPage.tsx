@@ -1,9 +1,10 @@
 "use client"
 
-import { Content } from "antd/es/layout/layout"
+import Loading from "../components/Loading"
 
-export default function MainPage(){
-    return(<Content className="m-0 p-24">
+export default function MainPage() {
 
-    </Content>)
+    return (<div className="min-h-dvh">
+        
+    </div>)
 }
