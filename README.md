@@ -6,6 +6,7 @@
 - [ ] - Scene Creating
 - [X] - Theme support
 - [ ] - Add scene support
+- [ ] - Add desktop app
 - [ ] - Model tree [Skeleton,Bones,etc]
 ### Themes Support
 - [X] - Dark Theme
