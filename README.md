@@ -6,7 +6,6 @@
 - [ ] - Scene Creating
 - [X] - Theme support
 - [ ] - Add scene support
-- [ ] - Add desktop app
 - [ ] - Model tree [Skeleton,Bones,etc]
 ### Themes Support
 - [X] - Dark Theme
@@ -19,5 +18,6 @@
 - [ ] - Japan
 ### Other Support
 - [ ] - Mobile app [Idea]
+- [ ] - Add desktop app
 - [ ] - Support other extention
 - [ ] - Support other model extention
