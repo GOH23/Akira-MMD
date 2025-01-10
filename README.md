@@ -1,9 +1,14 @@
 ### Akira MMD | The Best Motion Capture Web App based on mediapipe
+### Usage
+### Perfomance
 ### Features
 - [ ] - Vmd Export
+- [ ] - Mp4 Export
 - [ ] - Model Import
 - [ ] - Scene Creating
-- [ ] - Theme support
+- [X] - Theme support
+- [ ] - Add scene support
+- [ ] - Model tree [Skeleton,Bones,etc]
 ### Themes Support
 - [X] - Dark Theme
 - [X] - Purple Theme
@@ -15,4 +20,6 @@
 - [ ] - Japan
 ### Other Support
 - [ ] - Mobile app [Idea]
+- [ ] - Add desktop app
 - [ ] - Support other extention
+- [ ] - Support other model extention
