@@ -1,14 +1,12 @@
 "use client"
-import { parse } from 'path';
-import { ConfigProvider, Input, Modal } from "antd"
+
+import { Input, Modal } from "antd"
 import { useState, useEffect, useRef } from "react";
 import { useScenes, ScenesType } from "../hookes/useScenes";
 import { useSearchParams } from "next/navigation";
 //babylon-mmd
-import HavokPhysics from "@babylonjs/havok";
-import { AssetContainer, Color3, Color4, DirectionalLight, Engine, HavokPlugin, HemisphericLight, loadAssetContainerAsync, Mesh, MeshBuilder, Scene, ShadowGenerator, Vector3 } from "@babylonjs/core";
-import { MmdCamera, MmdMesh, MmdPhysics, MmdRuntime, VmdLoader } from "babylon-mmd";
-import { PlayCircleOutlined, PauseCircleOutlined } from '@ant-design/icons';
+import { AssetContainer, Color3, Color4, DirectionalLight, Engine, HemisphericLight, loadAssetContainerAsync, Mesh, MeshBuilder, Scene, SceneLoader, ShadowGenerator, Vector3 } from "@babylonjs/core";
+import { MmdCamera, MmdMesh, MmdRuntime, VmdLoader } from "babylon-mmd";
 import { useMMDModels } from '../hookes/useMMDModels';
 import { AkiraButton } from './AkiraButton';
 
@@ -148,7 +146,6 @@ export default function SettingsModal({ opened, SetOpened }: { opened: boolean, 
     }, [SubModalOpened])
     useEffect(() => {
         loadMMDModel(scene?.modelPathOrLink)
-
     }, [MMDScene])
     // useEffect(() => {
     //     PlayAnimation ? mmdRuntime?.playAnimation() : mmdRuntime?.pauseAnimation()
@@ -162,15 +159,15 @@ export default function SettingsModal({ opened, SetOpened }: { opened: boolean, 
             <p className="text-ForegroundColor">Settings</p>
         </div>} footer={
             <div className="flex gap-x-5">
-                <button className="w-full bg-BackgroundButton text-ForegroundColor rounded-md duration-700 p-2 font-bold hover:bg-BackgroundHoverButton" onClick={() => SetOpened()}>Cancel</button>
-                <button className="w-full bg-BackgroundButton  text-ForegroundColor rounded-md duration-700 p-2 font-bold hover:bg-BackgroundHoverButton" onClick={() => SaveSettings()}>Submit</button>
+                <AkiraButton fillWidth onClick={() => SetOpened()}>Cancel</AkiraButton>
+                <AkiraButton fillWidth onClick={() => SaveSettings()}>Submit</AkiraButton>
             </div>
         } open={opened} styles={modalStyles}>
             <div className="flex flex-col gap-y-2">
                 <div className="flex justify-center items-center gap-x-3">
                     <p className="text-ForegroundColor">Selected Model</p>
                     <Input value={scene?.modelPathOrLink} className="max-w-52" readOnly />
-                    <button className=" bg-BackgroundButton  text-ForegroundColor rounded-md duration-700 p-2 font-bold hover:bg-BackgroundHoverButton" onClick={() => SetSubModalOpened(true)}>Select Model</button>
+                    <AkiraButton onClick={() => SetSubModalOpened(true)}>Select Model</AkiraButton>
                 </div>
                 <div className="flex items-center gap-x-3">
                     <p className="text-ForegroundColor">Selected Language</p>
@@ -184,10 +181,10 @@ export default function SettingsModal({ opened, SetOpened }: { opened: boolean, 
         </div>} open={SubModalOpened} styles={modalStyles} onCancel={() => SetSubModalOpened(false)} footer={
             <div className="flex gap-x-5">
 
-                <button className="w-full bg-BackgroundButton text-ForegroundColor rounded-md duration-700 p-2 font-bold hover:bg-BackgroundHoverButton" onClick={() => SetSubModalOpened(false)}>Cancel</button>
-                <button className="w-full bg-BackgroundButton  text-ForegroundColor rounded-md duration-700 p-2 font-bold hover:bg-BackgroundHoverButton" onClick={() => {
+                <AkiraButton fillWidth onClick={() => SetSubModalOpened(false)}>Cancel</AkiraButton>
+                <AkiraButton fillWidth onClick={() => {
 
-                }}>Submit</button>
+                }}>Submit</AkiraButton>
             </div>
         }>
             <div className="flex h-[500px]">

@@ -1,12 +1,12 @@
 "use client"
-import { CopyFilled, FolderFilled, FolderOutlined, MoonFilled, SettingFilled, SunFilled, ThunderboltFilled } from "@ant-design/icons";
+import { CloudOutlined, CopyFilled, FolderFilled, FolderOutlined, MoonFilled, SettingFilled, SunFilled, ThunderboltFilled } from "@ant-design/icons";
 import { Button, ConfigProvider, Menu } from "antd";
 import Sider from "antd/es/layout/Sider";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { AnimatePresence } from 'framer-motion'
 import { useNextJSToAntdTheme } from "./hookes/useCustomTheme";
-import ModalDialog from "./components/ModalDialog";
+
 import { useScenes } from "./hookes/useScenes";
 
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
@@ -50,10 +50,10 @@ export default function HeaderLayout() {
 
         }}>
             <div className={!collapsed ? "flex items-center px-1 h-10 w-full" : "flex justify-center items-center  h-10 w-full"}>
-                <p className={`text-center font-bold text-lg`}>
+                <p className={`text-center font-bold text-lg text-ForegroundColor`}>
                     Akira
                 </p>
-                {!collapsed && <button className="ml-auto text-2xl" onClick={() => { setTheme(theme == "dark" ? "purple" : theme == "purple" ? "light" : "dark") }}>
+                {!collapsed && <button className="ml-auto text-2xl text-ForegroundColor" onClick={() => { setTheme(theme == "dark" ? "purple" : theme == "purple" ? "light" : "dark") }}>
                     <AnimatePresence >
                         {theme == "light" ? <SunFilled /> : theme == "dark" ? <MoonFilled /> : <ThunderboltFilled />}
                     </AnimatePresence>
@@ -68,7 +68,6 @@ export default function HeaderLayout() {
                         modelPathOrLink: "Black.bpmx"
                     })
                 }}>Add Scene</button>
-                <button className="w-full bg-BackgroundButton rounded-md duration-700 p-2 font-bold hover:bg-BackgroundHoverButton">Add Model</button>
             </div>}
 
             <Menu
@@ -95,6 +94,12 @@ export default function HeaderLayout() {
                         key: 'settings',
                         label: 'Settings',
                         icon: <SettingFilled />
+                    },
+                    {
+                        key: "explore",
+                        label: "Explore",
+                        disabled: true,
+                        icon: <CloudOutlined />
                     }
                 ]} />
 

@@ -1,27 +1,119 @@
 "use client"
 import { useSearchParams } from 'next/navigation'
 import { useScenes, ScenesType } from '../hookes/useScenes'
-import { Fragment, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, MouseEvent } from 'react'
 //babylon-mmd & babylonjs
-import { AbstractMesh, ArcRotateCamera, AssetContainer, Color3, Color4, DirectionalLight, Engine, FreeCamera, HemisphericLight, loadAssetContainerAsync, Mesh, MeshBuilder, Scene, ShadowGenerator, Vector3 } from '@babylonjs/core'
-import { MmdCamera, MmdMesh, MmdModel, MmdRuntime, MmdStandardMaterialBuilder, SdefInjector } from 'babylon-mmd'
+
+
+import { ArcRotateCamera, AssetContainer, Color3, Color4, DirectionalLight, Engine, HavokPlugin, HemisphericLight, loadAssetContainerAsync, Mesh, MeshBuilder, MirrorTexture, Plane, Scene, SceneLoader, ShadowGenerator, StandardMaterial, Vector3 } from '@babylonjs/core'
+import { MmdModel, MmdPhysics, MmdRuntime, MmdStandardMaterialBuilder, SdefInjector } from 'babylon-mmd'
+import { AkiraButton } from '../components/AkiraButton'
+import { ArrowsAltOutlined, EyeInvisibleOutlined, EyeOutlined, MutedOutlined, PauseOutlined, PlayCircleOutlined, SoundOutlined, VideoCameraOutlined } from '@ant-design/icons'
+import HavokPhysics from '@babylonjs/havok'
+
+import { AkiraDrawer } from "../components/AkiraDrawer";
+import { FilesetResolver, HolisticLandmarker } from "@mediapipe/tasks-vision";
+import { SkeletonShow } from "../logic/Skeleton";
+import { MotionModel } from '../logic/MotionModel'
 
 export default function ScenePage() {
     const searchParams = useSearchParams()
+
     const sceneId = searchParams.get('sceneId')
     const scenes = useScenes((state) => state.scenes);
-    const [scene, setScene] = useState<ScenesType>()
+    const [scene, setScene] = useState<ScenesType>();
+    const [DrawerStates, setOpen] = useState<{
+        VideoDrawerOpened: boolean
+    }>({
+        VideoDrawerOpened: false
+    });
+    function OpenDrawer<T extends keyof { VideoDrawerOpened: boolean }>(selected: T, value: boolean) {
+        if (selected == "VideoDrawerOpened") {
+            setOpen({
+                ...DrawerStates,
+                VideoDrawerOpened: value
+            })
+        }
+    }
+    //video
+    const VideoCurrentRef = useRef<HTMLVideoElement>(null)
+    const SkeletonCanvasRef = useRef<HTMLCanvasElement>(null);
+    const [VideoState, SetVideoState] = useState<{
+        isPlaying: boolean,
+        SkeletonPlaced: boolean,
+        SoundEnabled: boolean
+    }>({
+        isPlaying: false,
+        SkeletonPlaced: true,
+        SoundEnabled: false
+    });
+    const onClicked = (ev: MouseEvent<HTMLButtonElement>) => {
+        const newState: typeof VideoState = {
+            ...VideoState,
+        }
+        newState[ev.currentTarget.id as keyof typeof VideoState] = !newState[ev.currentTarget.id as keyof typeof VideoState]
+        SetVideoState(newState)
+    }
+    //mediapipe with drawing
+    const [MotionCap, SetMotionCap] = useState(new MotionModel())
+    const HolisticRef = useRef<HolisticLandmarker>(null)
+    const [OnHolisticLoaded, SetHolisticLoaded] = useState(false)
+    const loadHolistic = async () => {
+        return FilesetResolver.forVisionTasks(
+            "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.15/wasm"
+        ).then(async vision => {
+            const holisticLandmarker = await HolisticLandmarker.createFromOptions(vision, {
+                baseOptions: {
+                    modelAssetPath:
+                        "https://storage.googleapis.com/mediapipe-models/holistic_landmarker/holistic_landmarker/float16/latest/holistic_landmarker.task",
+                    delegate: "GPU",
+                },
+
+                runningMode: "VIDEO",
+            })
+            HolisticRef.current = holisticLandmarker;
+        })
+    }
+    const runAnimation = async () => {
+
+        if (HolisticRef.current && VideoCurrentRef.current && !VideoCurrentRef.current.paused && VideoCurrentRef.current.readyState >= 2) {
+            HolisticRef.current!.detectForVideo(VideoCurrentRef.current, performance.now(), (res) => {
+                if (VideoState.SkeletonPlaced) SkeletonShow.onShowSkeleton(SkeletonCanvasRef, res)
+                if (MMDStates.MMDRuntime && MMDStates.MMDModel) MotionCap.motionCalculate(MMDStates.MMDModel, res);
+            });
+        }
+        requestAnimationFrame(runAnimation)
+    }
+    useEffect(() => {
+        loadHolistic();
+    }, [])
+    useEffect(() => {
+        if (HolisticRef.current) {
+
+            console.log("Holistic loaded");
+            SetHolisticLoaded(true)
+        }
+    }, [HolisticRef.current])
     //babylon-mmd
     const [MMDStates, SetMMDStates] = useState<{
         MMDScene?: Scene,
         MMDRuntime?: MmdRuntime,
-        MMDModel?: AssetContainer,
+        MMDModel?: MmdModel,
         MMDEngine?: Engine,
         MMDShadowManager?: ShadowGenerator
     }>({})
-    const [MaterialBuilder, SetMaterialBuilder] = useState(new MmdStandardMaterialBuilder())
+    const [MaterialBuilder, _] = useState(new MmdStandardMaterialBuilder())
     const convRef = useRef<HTMLCanvasElement>(null)
-    const loadModel = async (eng: Engine, modelScene: Scene, modelName: string, shadowGenerator: ShadowGenerator) => {
+    const loadPhysics = async () => {
+        let hk = new HavokPlugin(true, await HavokPhysics());
+        MMDStates.MMDScene!.enablePhysics(new Vector3(0, -9.8 * 10, 0), hk);
+    }
+    const loadModel = async (eng: Engine, modelScene: Scene, modelName: string, mmdRuntime: MmdRuntime, shadowGenerator: ShadowGenerator) => {
+        if (MMDStates.MMDModel) {
+            shadowGenerator.removeShadowCaster(MMDStates.MMDModel.mesh)
+            MMDStates.MMDModel.mesh.dispose();
+            mmdRuntime.destroyMmdModel(MMDStates.MMDModel);
+        }
         const modelMesh = await loadAssetContainerAsync(
             modelName,
             modelScene,
@@ -33,28 +125,39 @@ export default function ScenePage() {
                 pluginOptions: {
                     mmdmodel: {
                         materialBuilder: MaterialBuilder,
+                        boundingBoxMargin: 60,
                         loggingEnabled: true
                     }
                 }
-            }
-        ).then((result) => {
-            result.addAllToScene();
-            for (const mesh of result.meshes[0].metadata.meshes) mesh.receiveShadows = true;
-            shadowGenerator.addShadowCaster(result.meshes[0]);
-            return result;
-        });
-        return modelMesh;
+            }).then((res) => {
+                res.addAllToScene();
+                for (const mesh of res.meshes[0].metadata.meshes) mesh.receiveShadows = true;
+                shadowGenerator.addShadowCaster(res.meshes[0]);
+                return res.meshes[0]
+            })
+        return mmdRuntime.createMmdModel(modelMesh as Mesh);
     }
+
     useEffect(() => {
-        const engine = new Engine(convRef.current, true);
+        const engine = new Engine(convRef.current, true, {
+            preserveDrawingBuffer: false,
+            stencil: false,
+            antialias: false,
+            alpha: true,
+            premultipliedAlpha: false,
+            powerPreference: "high-performance",
+            doNotHandleTouchAction: false,
+            doNotHandleContextLost: true,
+            audioEngine: false,
+        },
+            true);
         const mmdscene = new Scene(engine);
         MaterialBuilder.loadOutlineRenderingProperties = (): void => { /* do nothing */ };
-
         engine.loadingUIBackgroundColor = "var(--bg-color)"
         mmdscene.ambientColor = new Color3(0.5, 0.5, 0.5);
         mmdscene.clearColor = new Color4(0.95, 0.95, 0.95, 1.0);
         //const camera = new MmdCamera("mmdCamera", new Vector3(0, 10, 0), mmdscene);
-        const camera = new ArcRotateCamera("Camera",-1.3, Math.PI / 4 , 40, Vector3.Zero(), mmdscene);
+        const camera = new ArcRotateCamera("Camera", -1.6, 1, 50, Vector3.Zero(), mmdscene);
         camera.attachControl(convRef.current, true);
         const mmdRuntime = new MmdRuntime(mmdscene);
         mmdRuntime.register(mmdscene)
@@ -73,9 +176,8 @@ export default function ScenePage() {
         shadowGenerator.transparencyShadow = true;
         shadowGenerator.bias = 0.01;
 
-        const ground = MeshBuilder.CreateGround("ground2", { width: 60, height: 60, subdivisions: 2, updatable: false }, mmdscene);
+        const ground = MeshBuilder.CreateGround("ground2", { width: 100, height: 100, subdivisions: 2, updatable: false }, mmdscene);
         ground.receiveShadows = true;
-
         shadowGenerator.addShadowCaster(ground);
 
         //mmdRuntime.setCamera(camera);
@@ -86,7 +188,7 @@ export default function ScenePage() {
         mmdscene.onAfterRenderObservable.addOnce(() => engine.hideLoadingUI());
         if (scene) {
 
-            loadModel(engine, mmdscene, scene.modelPathOrLink, shadowGenerator).then((res) => {
+            loadModel(engine, mmdscene, scene.modelPathOrLink, mmdRuntime, shadowGenerator).then((res) => {
                 SetMMDStates({
                     MMDRuntime: mmdRuntime,
                     MMDScene: mmdscene,
@@ -99,10 +201,18 @@ export default function ScenePage() {
 
 
     }, [scene])
+
+    useEffect(() => {
+
+        if (VideoCurrentRef.current && VideoCurrentRef.current.src && VideoState) {
+            if (VideoState.isPlaying) VideoCurrentRef.current.play()
+            else VideoCurrentRef.current.pause();
+        }
+    }, [VideoState])
     //rerender model with shadow
     useEffect(() => {
-        if (MMDStates.MMDEngine && MMDStates.MMDScene && MMDStates.MMDShadowManager && scene!.modelPathOrLink) {
-            loadModel(MMDStates.MMDEngine, MMDStates.MMDScene, scene!.modelPathOrLink, MMDStates.MMDShadowManager).then((res) => {
+        if (MMDStates.MMDEngine && MMDStates.MMDScene && MMDStates.MMDRuntime && MMDStates.MMDShadowManager && scene!.modelPathOrLink) {
+            loadModel(MMDStates.MMDEngine, MMDStates.MMDScene, scene!.modelPathOrLink, MMDStates.MMDRuntime, MMDStates.MMDShadowManager).then((res) => {
                 SetMMDStates({ ...MMDStates, MMDModel: res })
                 MMDStates.MMDEngine!.hideLoadingUI();
             })
@@ -113,20 +223,69 @@ export default function ScenePage() {
 
     useEffect(() => {
 
-        if (MMDStates.MMDEngine && MMDStates.MMDModel && MMDStates.MMDScene) {
+        if (MMDStates.MMDEngine && MMDStates.MMDScene) {
             MMDStates.MMDEngine.hideLoadingUI();
             console.log("Loaded");
-            MMDStates.MMDEngine.runRenderLoop(() => {
-                MMDStates.MMDScene!.render()
+            loadPhysics().then(() => {
+                MMDStates.MMDEngine?.runRenderLoop(() => {
+                    MMDStates.MMDScene?.render()
 
-            });
+                });
+            })
+
+
         }
-    }, [MMDStates.MMDEngine, MMDStates.MMDEngine, MMDStates.MMDScene])
+    }, [MMDStates.MMDEngine, MMDStates.MMDScene])
     //
     useEffect(() => {
+
         setScene(scenes.find((el) => el.id == sceneId))
     })
     return (<div className="relative">
         <canvas ref={convRef} style={{ width: "100%", height: "100vh" }} className="" />
+        {/* Controls */}
+        <div className="absolute m-2 font-bold text-[20px] flex gap-x-2 right-0 top-0">
+            <AkiraButton className="size-[45px] text-white" onClick={() => convRef.current?.requestFullscreen()}>
+                <ArrowsAltOutlined />
+            </AkiraButton>
+            <AkiraButton className="size-[45px] text-white" onClick={() => OpenDrawer("VideoDrawerOpened", !DrawerStates.VideoDrawerOpened)}>
+                <VideoCameraOutlined />
+            </AkiraButton>
+            <AkiraButton className="size-[45px] text-white">
+
+            </AkiraButton>
+        </div>
+        {/* Motion Video */}
+        <AkiraDrawer closable title="Select Video" open={DrawerStates.VideoDrawerOpened} onClose={() => { OpenDrawer("VideoDrawerOpened", false) }} loading={!OnHolisticLoaded}>
+            <AkiraButton className="w-full p-0">
+                <div className="w-full">
+                    <label htmlFor="file" className='cursor-pointer text-white flex justify-center items-center h-[32px] w-full'>Load Video File</label>
+                    <input id="file" type="file" className="hidden" accept="video/*" onChange={async (event) => {
+                        const file = event.target.files![0]
+                        const url = URL.createObjectURL(file);
+                        VideoCurrentRef.current!.src = url;
+                        requestAnimationFrame(runAnimation)
+                    }} />
+                </div>
+            </AkiraButton>
+            {/* Video Controls */}
+            <div className='flex m-1 justify-center'>
+                <div className="w-fit relative">
+                    <video muted={VideoState.SoundEnabled} ref={VideoCurrentRef} controls={false} className="rounded-md max-h-[400px] w-full min-h-[200px]" />
+                    <canvas ref={SkeletonCanvasRef} className={`${VideoState.SkeletonPlaced ? "absolute" : "hidden"} top-0 h-full w-full`} />
+                </div>
+            </div>
+            <div className="flex justify-around text-[20px]">
+                <button id="isPlaying" className="p-2 size-[40px] font-bold cursor-pointer hover:bg-BackgroundHoverButton flex duration-700 justify-center items-center aspect-square rounded bg-BackgroundButton text-white" onClick={onClicked}>
+                    {VideoState.isPlaying ? <PlayCircleOutlined /> : <PauseOutlined />}
+                </button>
+                <button id="SkeletonPlaced" className="p-2 size-[45px] font-bold cursor-pointer  hover:bg-BackgroundHoverButton duration-700 flex justify-center items-center aspect-square rounded bg-BackgroundButton text-white" onClick={onClicked}>
+                    {VideoState.SkeletonPlaced ? <EyeOutlined /> : <EyeInvisibleOutlined />}
+                </button>
+                <button id="SoundEnabled" className="p-2 size-[45px] font-bold cursor-pointer  hover:bg-BackgroundHoverButton duration-700 flex justify-center items-center aspect-square rounded bg-BackgroundButton text-white" onClick={onClicked}>
+                    {!VideoState.SoundEnabled ? <SoundOutlined /> : <MutedOutlined />}
+                </button>
+            </div>
+        </AkiraDrawer>
     </div>)
-}
+} 

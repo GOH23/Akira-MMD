@@ -50,18 +50,18 @@ export const useNextJSToAntdTheme = (theme: string | undefined): HookType => {
         case "light":
             return {
                 Layout: {
-                    bg: "",
-                    fg: ""
+                    bg: "#f5ebe0",
+                    fg: "#212121"
                 },
                 MenuTheme: {
-                    bg: "",
-                    fg: "",
-                    activeFg: "",
-                    itemSelectedBg: ""
+                    bg: "#f5ebe0",
+                    fg: "#212121",
+                    activeFg: "#4b4a4a",
+                    itemSelectedBg: "#d5bdaf"
                 },
 
-                borderColor: "613dc1",
-                borderActiveColor: "#522882"
+                borderColor: "#e3d5ca",
+                borderActiveColor: "#d5bdaf"
             }
         default:
             return {

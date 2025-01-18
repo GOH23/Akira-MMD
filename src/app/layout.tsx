@@ -8,6 +8,7 @@ import { ThemeProvider } from "next-themes";
 
 import HeaderLayout from "./ui/HeaderWithoutSsr";
 import { Content } from "antd/es/layout/layout";
+import { Suspense } from "react";
 
 
 export const metadata: Metadata = {
@@ -23,13 +24,15 @@ export default function RootLayout({
   return (
     <html suppressHydrationWarning>
       <body>
-        
+
         <ThemeProvider defaultTheme="purple" themes={["purple", "dark", "light"]} enableSystem={false}>
           <Layout className="overflow-x-hidden">
             <HeaderLayout />
             <Layout>
               <Content >
+
                 {children}
+
               </Content>
 
             </Layout>
