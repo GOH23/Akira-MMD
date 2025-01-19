@@ -11,6 +11,7 @@ export default {
       colors: {
         BackgroundColor: "var(--bg-color)",
         ForegroundColor: "var(--text-color)",
+        ForegroundButton: "var(--fg-button-color)",
         BackgroundButton: "var(--bg-button-color)",
         BackgroundHoverButton: "var(--bg-hover-button-color)",
         MenuItemBg: "var(--menu-layout-bg)"

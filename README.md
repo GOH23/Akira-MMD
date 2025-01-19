@@ -7,12 +7,12 @@
 - [ ] - Model Import
 - [ ] - Scene Creating
 - [X] - Theme support
-- [ ] - Add scene support
+- [X] - Add scene support
 - [ ] - Model tree [Skeleton,Bones,etc]
 ### Themes Support
 - [X] - Dark Theme
 - [X] - Purple Theme
-- [ ] - White Theme
+- [X] - White Theme
 - [ ] - Custom Theme
 ### Languages Support
 - [ ] - Russian
