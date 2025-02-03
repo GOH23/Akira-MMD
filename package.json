@@ -1,6 +1,7 @@
 {
   "name": "akira",
-  "version": "0.6.0",
+  "description": "Motion capture",
+  "version": "0.7.0b",
   "private": true,
   "scripts": {
     "dev": "next dev",
