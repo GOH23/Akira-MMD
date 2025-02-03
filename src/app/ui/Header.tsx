@@ -3,28 +3,31 @@ import { CloudOutlined, CopyFilled, FolderFilled, FolderOutlined, MoonFilled, Se
 import { Button, ConfigProvider, Menu } from "antd";
 import Sider from "antd/es/layout/Sider";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence } from 'framer-motion'
 import { useNextJSToAntdTheme } from "./hookes/useCustomTheme";
 
-import { useScenes } from "./hookes/useScenes";
-
+import { ScenesType, useScenes } from "./hookes/useScenes";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import SettingsModal from "./components/SettingsModal";
+import { AkiraModalDialog } from "./components/AkiraModalDialog";
+
 
 export default function HeaderLayout() {
     const { theme, setTheme } = useTheme()
     const { push } = useRouter()
     const searchParams = useSearchParams()
     const sceneId = searchParams.get('sceneId')
-    const { addScene, scenes } = useScenes((el) => el);
+    const { addScene, scenes, removeScene } = useScenes((el) => el);
     const { Layout, MenuTheme } = useNextJSToAntdTheme(theme);
     const [SettingsOpened, SetSettingsOpened] = useState(false)
     const [collapsed, setCollapsed] = useState(false);
-    setInterval(async ()=>{
-        window.dispatchEvent(new Event('resize'));
-    },2000)
-
+    const timerRef = useRef<NodeJS.Timeout>(null);
+    const [ModalDeleteSceneOpened, SetModalDeleteSceneOpened] = useState(false);
+    const [SelectedScene, SetSelectedScene] = useState<ScenesType>()
+    useEffect(() => {
+        if (SelectedScene) SetModalDeleteSceneOpened(!ModalDeleteSceneOpened);
+    }, [SelectedScene])
     return <ConfigProvider
 
         theme={{
@@ -45,14 +48,15 @@ export default function HeaderLayout() {
             }
         }}
     >
-        <Sider collapsible collapsed={collapsed} className="z-[100] overflow-y-hidden"  onCollapse={(value) => {
+        <Sider collapsible collapsed={collapsed} className="z-[100] overflow-y-hidden" onCollapse={(value) => {
             setCollapsed(value);
 
         }}>
-            <div className={!collapsed ? "flex items-center px-1 h-10 w-full" : "flex justify-center items-center  h-10 w-full"}>
+            <div className={!collapsed ? "flex items-center px-1 h-10 w-full" : "flex justify-center items-center  my-2 h-10 w-full"}>
                 <p className={`text-center font-bold text-lg text-ForegroundColor`}>
-                    Akira
+                    Akira v0.7.0b
                 </p>
+                
                 {!collapsed && <button className="ml-auto text-2xl text-ForegroundColor" onClick={() => { setTheme(theme == "dark" ? "purple" : theme == "purple" ? "light" : "dark") }}>
                     <AnimatePresence >
                         {theme == "light" ? <SunFilled /> : theme == "dark" ? <MoonFilled /> : <ThunderboltFilled />}
@@ -72,10 +76,35 @@ export default function HeaderLayout() {
 
             <Menu
                 defaultSelectedKeys={[sceneId ?? ""]}
+                onTouchStart={(el) => {
+                    const element = el.target as HTMLUListElement;
+                    if (element.innerText == "Scenes" || element.innerText == "Settings" || element.innerText == "Explore") return;
+                    timerRef.current = setTimeout(() => {
+                        const searchedScene = scenes.find((el) => el.sceneName == element.innerText);
+                        if (searchedScene) SetSelectedScene(searchedScene);
+                    }, 2000)
+                }}
+                onTouchEnd={() => {
+                    if (timerRef.current) clearTimeout(timerRef.current);
+                }}
+                onMouseDown={(el) => {
+                    const element = el.target as HTMLUListElement;
+                    if (element.innerText == "Scenes" || element.innerText == "Settings" || element.innerText == "Explore") return;
+                    timerRef.current = setTimeout(() => {
+                        const searchedScene = scenes.find((el) => el.sceneName == element.innerText);
+                        if (searchedScene) SetSelectedScene(searchedScene);
+                    }, 2000)
+
+                }}
+                onMouseUp={() => {
+                    if (timerRef.current) clearTimeout(timerRef.current);
+                }}
                 onClick={(el) => {
                     if (el.key == "settings") {
                         SetSettingsOpened(!SettingsOpened)
-                    } else { push(`/scenes?sceneId=${el.key}`) }
+                    } else {
+                        push(`/scenes?sceneId=${el.key}`)
+                    }
 
                 }}
                 style={{ height: '100%', borderRight: 0 }} mode="inline" items={[
@@ -104,6 +133,21 @@ export default function HeaderLayout() {
                 ]} />
 
         </Sider>
+        <AkiraModalDialog title={<div>
+            <p className="text-ForegroundColor">Delete scene</p>
+        </div>} okText="Delete" cancelText="Cancel" okType="danger" open={ModalDeleteSceneOpened}
+            onOk={() => {
+                if (SelectedScene?.id) removeScene(SelectedScene.id)
+                SetModalDeleteSceneOpened(false);
+            }}
+            onCancel={() => {
+                SetModalDeleteSceneOpened(false);
+            }}>
+            <div className="text-ForegroundColor">
+                <p>You want to delete selected scene?</p>
+            </div>
+
+        </AkiraModalDialog>
         <SettingsModal opened={SettingsOpened} SetOpened={() => SetSettingsOpened(!SettingsOpened)} />
     </ConfigProvider>
 }

@@ -1,5 +1,5 @@
 import React from "react";
-
+export type HoverAnimation = "" | ""
 export function AkiraButton({textSize,fillWidth,children,className,onClick}:{
     textSize?: number,
     fillWidth?: boolean,

@@ -97,11 +97,6 @@ export default function SettingsModal({ opened, SetOpened }: { opened: boolean, 
             scene.ambientColor = new Color3(0.5, 0.5, 0.5);
             scene.clearColor = new Color4(0.95, 0.95, 0.95, 1.0);
             const camera = new MmdCamera("mmdCamera", new Vector3(0, 10, 0), scene);
-            // const loadPhysics = async () => {
-            //     let hk = new HavokPlugin(true, await HavokPhysics());
-            //     scene.enablePhysics(new Vector3(0, -9.8 * 10, 0), hk);
-            // }
-            //const mmdRuntime = new MmdRuntime(scene, new MmdPhysics(scene));
             const mmdRuntime = new MmdRuntime(scene);
             mmdRuntime.register(scene)
 
@@ -131,7 +126,6 @@ export default function SettingsModal({ opened, SetOpened }: { opened: boolean, 
             setShadowGenerator(shadowGenerator);
             engine.runRenderLoop(() => {
                 scene.render()
-                //loadPhysics().then(() => scene.render())
             });
         } else {
             engine?.dispose();
@@ -147,9 +141,7 @@ export default function SettingsModal({ opened, SetOpened }: { opened: boolean, 
     useEffect(() => {
         loadMMDModel(scene?.modelPathOrLink)
     }, [MMDScene])
-    // useEffect(() => {
-    //     PlayAnimation ? mmdRuntime?.playAnimation() : mmdRuntime?.pauseAnimation()
-    // }, [PlayAnimation])
+
     const SaveSettings = () => {
         SetOpened();
     }
