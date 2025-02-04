@@ -30,9 +30,9 @@ export default function RootLayout({
             <HeaderLayout />
             <Layout>
               <Content >
-
-                {children}
-
+                <Suspense>
+                  {children}
+                </Suspense>
               </Content>
 
             </Layout>
