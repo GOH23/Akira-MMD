@@ -1,5 +1,5 @@
 "use client"
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useScenes, ScenesType } from '../hookes/useScenes'
 import { useEffect, useRef, useState, MouseEvent, useMemo } from 'react'
 //babylon-mmd & babylonjs
@@ -19,7 +19,6 @@ import AkiraRadioButton from '../components/AkiraRadioButton'
 
 export default function ScenePage() {
     const searchParams = useSearchParams()
-
     const sceneId = searchParams.get('sceneId')
     const scenes = useScenes((state) => state.scenes);
     const [scene, setScene] = useState<ScenesType>();
@@ -220,7 +219,8 @@ export default function ScenePage() {
     }, [VideoState])
     //rerender model with shadow
     useEffect(() => {
-        if (MMDStates.MMDEngine && MMDStates.MMDScene && MMDStates.MMDRuntime && MMDStates.MMDShadowManager && scene!.modelPathOrLink) {
+        
+        if (MMDStates.MMDEngine && MMDStates.MMDScene && MMDStates.MMDRuntime && MMDStates.MMDShadowManager && scene && scene.modelPathOrLink) {
             loadModel(MMDStates.MMDEngine, MMDStates.MMDScene, scene!.modelPathOrLink, MMDStates.MMDRuntime, MMDStates.MMDShadowManager).then((res) => {
                 SetMMDStates({ ...MMDStates, MMDModel: MMDStates.MMDRuntime?.createMmdModel(res.Model), MMDAssetContainer: res.AssetContainer })
                 MMDStates.MMDEngine!.hideLoadingUI();

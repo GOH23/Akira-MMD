@@ -1,6 +1,6 @@
 "use client"
 import { CloudOutlined, CopyFilled, FolderFilled, FolderOutlined, MoonFilled, SettingFilled, SunFilled, ThunderboltFilled } from "@ant-design/icons";
-import { Button, ConfigProvider, Menu } from "antd";
+import { Button, ConfigProvider, Menu, notification } from "antd";
 import Sider from "antd/es/layout/Sider";
 import { useTheme } from "next-themes";
 import { useEffect, useRef, useState } from "react";
@@ -25,9 +25,21 @@ export default function HeaderLayout() {
     const timerRef = useRef<NodeJS.Timeout>(null);
     const [ModalDeleteSceneOpened, SetModalDeleteSceneOpened] = useState(false);
     const [SelectedScene, SetSelectedScene] = useState<ScenesType>()
+    const [api, contextHolder] = notification.useNotification();
     useEffect(() => {
         if (SelectedScene) SetModalDeleteSceneOpened(!ModalDeleteSceneOpened);
     }, [SelectedScene])
+    const onHoldingEnded = () => {
+        if (timerRef.current) clearTimeout(timerRef.current);
+    }
+    const onHoldingStarted = (el: any) =>{
+        const element = el.target as HTMLUListElement;
+        if (element.innerText == "Scenes" || element.innerText == "Settings" || element.innerText == "Explore") return;
+        timerRef.current = setTimeout(() => {
+            const searchedScene = scenes.find((el) => el.sceneName == element.innerText);
+            if (searchedScene) SetSelectedScene(searchedScene);
+        }, 1000)
+    }
     return <ConfigProvider
 
         theme={{
@@ -52,11 +64,12 @@ export default function HeaderLayout() {
             setCollapsed(value);
 
         }}>
+            {contextHolder}
             <div className={!collapsed ? "flex items-center px-1 h-10 w-full" : "flex justify-center items-center  my-2 h-10 w-full"}>
                 <p className={`text-center font-bold text-lg text-ForegroundColor`}>
                     Akira v0.7.0b
                 </p>
-                
+
                 {!collapsed && <button className="ml-auto text-2xl text-ForegroundColor" onClick={() => { setTheme(theme == "dark" ? "purple" : theme == "purple" ? "light" : "dark") }}>
                     <AnimatePresence >
                         {theme == "light" ? <SunFilled /> : theme == "dark" ? <MoonFilled /> : <ThunderboltFilled />}
@@ -66,39 +79,28 @@ export default function HeaderLayout() {
             </div>
             {!collapsed && <div className="m-1 flex flex-col gap-y-1">
                 <button className="w-full bg-BackgroundButton rounded-md duration-700 p-2 font-bold hover:bg-BackgroundHoverButton" onClick={() => {
-                    addScene({
-                        sceneName: `Scene ${scenes.length + 1}`,
-                        id: crypto.randomUUID(),
-                        modelPathOrLink: "Black.bpmx"
-                    })
+                    if (scenes.length <= 10) {
+                        addScene({
+                            sceneName: `Scene ${scenes.length + 1}`,
+                            id: crypto.randomUUID(),
+                            modelPathOrLink: "Black.bpmx"
+                        });
+                        api.success({
+                            message: "Added scene",
+                            pauseOnHover: true,
+                            className: ""
+                        })
+                    }
+
                 }}>Add Scene</button>
             </div>}
 
             <Menu
                 defaultSelectedKeys={[sceneId ?? ""]}
-                onTouchStart={(el) => {
-                    const element = el.target as HTMLUListElement;
-                    if (element.innerText == "Scenes" || element.innerText == "Settings" || element.innerText == "Explore") return;
-                    timerRef.current = setTimeout(() => {
-                        const searchedScene = scenes.find((el) => el.sceneName == element.innerText);
-                        if (searchedScene) SetSelectedScene(searchedScene);
-                    }, 2000)
-                }}
-                onTouchEnd={() => {
-                    if (timerRef.current) clearTimeout(timerRef.current);
-                }}
-                onMouseDown={(el) => {
-                    const element = el.target as HTMLUListElement;
-                    if (element.innerText == "Scenes" || element.innerText == "Settings" || element.innerText == "Explore") return;
-                    timerRef.current = setTimeout(() => {
-                        const searchedScene = scenes.find((el) => el.sceneName == element.innerText);
-                        if (searchedScene) SetSelectedScene(searchedScene);
-                    }, 2000)
-
-                }}
-                onMouseUp={() => {
-                    if (timerRef.current) clearTimeout(timerRef.current);
-                }}
+                onTouchStart={onHoldingStarted}
+                onTouchEnd={onHoldingEnded}
+                onMouseDown={onHoldingStarted}
+                onMouseUp={onHoldingEnded}
                 onClick={(el) => {
                     if (el.key == "settings") {
                         SetSettingsOpened(!SettingsOpened)
@@ -137,7 +139,10 @@ export default function HeaderLayout() {
             <p className="text-ForegroundColor">Delete scene</p>
         </div>} okText="Delete" cancelText="Cancel" okType="danger" open={ModalDeleteSceneOpened}
             onOk={() => {
-                if (SelectedScene?.id) removeScene(SelectedScene.id)
+                if (SelectedScene?.id){
+                    removeScene(SelectedScene.id)
+                    if(sceneId == SelectedScene.id) push("/")
+                }
                 SetModalDeleteSceneOpened(false);
             }}
             onCancel={() => {
