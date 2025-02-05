@@ -43,28 +43,28 @@ export default function SettingsModal({ opened, SetOpened }: { opened: boolean, 
 
     //load mmd model
     const loadMMDModel = async (path?: string, shadowGenerator?: ShadowGenerator) => {
-        setTimeout(async () => {
-            if (MMDAssetContainer) {
-                MMDAssetContainer.removeAllFromScene();
-                if (MMDAssetContainer.meshes[0]) {
-                    for (const mesh of MMDAssetContainer.meshes[0].metadata.meshes) mesh.receiveShadows = false;
-                    shadowGenerator?.removeShadowCaster(MMDAssetContainer.meshes[0]);
-                }
-
+        if (MMDAssetContainer) {
+            
+            MMDAssetContainer.removeAllFromScene();
+            if (MMDAssetContainer.meshes[0]) {
+                
+                for (const mesh of MMDAssetContainer.meshes[0].metadata.meshes) mesh.receiveShadows = false;
+                shadowGenerator?.removeShadowCaster(MMDAssetContainer.meshes[0]);
             }
-            if (MMDScene) {
-                const mmdMesh = await loadAssetContainerAsync(path ?? "Ganyubikini.bpmx", MMDScene, { rootUrl: `${window.location.origin}/model/` })
-                    .then((result) => {
-                        SetMMDAssetContainer(result);
-                        result.addAllToScene();
-                        console.log("Load model");
-                        return result.meshes[0] as MmdMesh;
 
-                    });
-                for (const mesh of mmdMesh.metadata.meshes) mesh.receiveShadows = true;
-                if (shadowGenerator) shadowGenerator.addShadowCaster(mmdMesh);
-            }
-        }, 1000)
+        }
+        if (MMDScene) {
+            const mmdMesh = await loadAssetContainerAsync(path ?? "Ganyubikini.bpmx", MMDScene, { rootUrl: `${window.location.origin}/model/` })
+                .then((result) => {
+                    SetMMDAssetContainer(result);
+                    result.addAllToScene();
+                    console.log("Load model");
+                    return result.meshes[0] as MmdMesh;
+
+                });
+            for (const mesh of mmdMesh.metadata.meshes) mesh.receiveShadows = true;
+            if (shadowGenerator) shadowGenerator.addShadowCaster(mmdMesh);
+        }
     }
     //load animation
     //future function [load custom animation]
