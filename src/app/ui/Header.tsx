@@ -67,7 +67,7 @@ export default function HeaderLayout() {
             {contextHolder}
             <div className={!collapsed ? "flex items-center px-1 h-10 w-full" : "flex justify-center items-center  my-2 h-10 w-full"}>
                 <p className={`text-center font-bold text-lg text-ForegroundColor`}>
-                    Akira v0.7.0b
+                    Akira v0.7.0b-2
                 </p>
 
                 {!collapsed && <button className="ml-auto text-2xl text-ForegroundColor" onClick={() => { setTheme(theme == "dark" ? "purple" : theme == "purple" ? "light" : "dark") }}>

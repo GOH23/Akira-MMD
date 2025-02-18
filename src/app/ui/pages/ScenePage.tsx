@@ -1,15 +1,14 @@
 "use client"
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { useScenes, ScenesType } from '../hookes/useScenes'
 import { useEffect, useRef, useState, MouseEvent, useMemo } from 'react'
 //babylon-mmd & babylonjs
 
 
-import { AbstractMesh, ArcRotateCamera, AssetContainer, Color3, Color4, DirectionalLight, Engine, HavokPlugin, HemisphericLight, loadAssetContainerAsync, Material, Mesh, MeshBuilder, MirrorTexture, Plane, Scene, SceneLoader, ShadowGenerator, StandardMaterial, Vector3 } from '@babylonjs/core'
-import { getMmdWasmInstance, MmdModel, MmdPhysics, MmdRuntime, MmdStandardMaterialBuilder, MmdWasmInstance, MmdWasmInstanceTypeMD, MmdWasmInstanceTypeMPD, MmdWasmInstanceTypeSD, MmdWasmModel, MmdWasmPhysics, MmdWasmRuntime, SdefInjector } from 'babylon-mmd'
+import { AbstractMesh, ArcRotateCamera, AssetContainer, Color3, DirectionalLight, Engine, HemisphericLight, loadAssetContainerAsync, Mesh, MeshBuilder, Scene, ShadowGenerator, Vector3 } from '@babylonjs/core'
+import { getMmdWasmInstance, MmdStandardMaterialBuilder, MmdWasmInstanceTypeMPD, MmdWasmModel, MmdWasmPhysics, MmdWasmRuntime, SdefInjector } from 'babylon-mmd'
 import { AkiraButton } from '../components/AkiraButton'
-import { ArrowsAltOutlined, EyeInvisibleOutlined, EyeOutlined, MutedOutlined, PauseOutlined, PlayCircleOutlined, SettingFilled, SoundOutlined, VideoCameraFilled, VideoCameraOutlined } from '@ant-design/icons'
-import HavokPhysics from '@babylonjs/havok'
+import { ArrowsAltOutlined, EyeInvisibleOutlined, EyeOutlined, MutedOutlined, PauseOutlined, PlayCircleOutlined, SettingFilled, SoundOutlined, VideoCameraFilled } from '@ant-design/icons'
 
 import { AkiraDrawer } from "../components/AkiraDrawer";
 import { FilesetResolver, HolisticLandmarker } from "@mediapipe/tasks-vision";
@@ -82,7 +81,9 @@ export default function ScenePage() {
 
         if (HolisticRef.current && VideoCurrentRef.current && !VideoCurrentRef.current.paused && VideoCurrentRef.current.readyState >= 2) {
             HolisticRef.current!.detectForVideo(VideoCurrentRef.current, performance.now(), (res) => {
-                if (VideoState.SkeletonPlaced) SkeletonShow.onShowSkeleton(SkeletonCanvasRef, res)
+                if (VideoState.SkeletonPlaced){
+                    SkeletonShow.onShowSkeleton(SkeletonCanvasRef, res)
+                }
                 if (MMDStates.MMDRuntime && MMDStates.MMDModel) {
                     if (!MotionCap._Model) MotionCap.init(MMDStates.MMDModel);
                     MotionCap.motionCalculate(res)
@@ -257,7 +258,7 @@ export default function ScenePage() {
             <AkiraButton className="size-[45px]" onClick={() => OpenDrawer("VideoDrawerOpened", true)}>
                 <VideoCameraFilled />
             </AkiraButton>
-            <AkiraButton className="size-[45px]" onClick={() => OpenDrawer("SettingsDrawerOpened", true)}>
+            <AkiraButton disabled className="size-[45px]" onClick={() => OpenDrawer("SettingsDrawerOpened", true)}>
                 <SettingFilled />
             </AkiraButton>
         </div>
