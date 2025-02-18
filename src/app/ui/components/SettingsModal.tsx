@@ -174,21 +174,21 @@ export default function SettingsModal({ opened, SetOpened }: { opened: boolean, 
             <div className="flex gap-x-5">
 
                 <AkiraButton fillWidth onClick={() => SetSubModalOpened(false)}>Cancel</AkiraButton>
-                <AkiraButton fillWidth onClick={() => {
+                <AkiraButton disabled fillWidth onClick={() => {
 
                 }}>Submit</AkiraButton>
             </div>
         }>
-            <div className="flex h-[500px]">
+            <div className="flex gap-x-4 h-[500px]">
                 <div className="basis-1/2">
-                    <AkiraButton className="my-2" fillWidth>Add Model</AkiraButton>
+                    <AkiraButton className="my-2" disabled fillWidth>Add Model</AkiraButton>
                     <div>
                         {models.map((el, ind) => <div onClick={() => {
                             if (sceneId) {
                                 changeSceneModel(sceneId, el.ModelPath)
                                 loadMMDModel(el.ModelPath, mmdShadowGenerator)
                             }
-                        }} key={ind} className="bg-BackgroundButton duration-700 hover:bg-BackgroundHoverButton cursor-pointer text-ForegroundColor p-3"><p>{el.ModelName}</p></div>)}
+                        }} key={ind} className="bg-BackgroundButton font-bold duration-700 hover:bg-BackgroundHoverButton cursor-pointer text-ForegroundButton p-3"><p>{el.ModelName}</p></div>)}
                     </div>
                 </div>
                 <div className="basis-1/2 relative">

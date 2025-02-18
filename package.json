@@ -1,7 +1,7 @@
 {
   "name": "akira",
   "description": "Motion capture",
-  "version": "0.7.0b-1",
+  "version": "0.7.0b-2",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -18,7 +18,7 @@
     "@mediapipe/drawing_utils": "^0.3.1675466124",
     "@mediapipe/holistic": "^0.5.1675471629",
     "@mediapipe/pose": "^0.5.1675469404",
-    "@mediapipe/tasks-vision": "^0.10.20",
+    "@mediapipe/tasks-vision": "^0.10.18",
     "antd": "^5.22.6",
     "antd-style": "^3.7.1",
     "babylon-mmd": "^0.59.1",
@@ -30,7 +30,6 @@
     "react-dom": "^18",
     "zustand": "^5.0.2"
   },
-  
   "devDependencies": {
     "@types/node": "^20",
     "@types/react": "^19",
