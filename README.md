@@ -2,11 +2,17 @@
 ![20250221_103503](https://github.com/user-attachments/assets/af34956c-1e64-4673-9c4c-65fbd4a0142c)
 
 ### Usage
+1. Creating scene in tab ui
+2. Click to scene
+3. Click to video logo
+4. Load video (.mp4)
+5. Showing result
 ### Perfomance
+Use Dedicated GPU for better perfomance motion capture
 ### Features
 - [ ] - Vmd Export
-- [ ] - Mp4 Export
-- [ ] - Model Import
+- [X] - Mp4 Export
+- [X] - Model Import
 - [X] - Scene Creating
 - [X] - Theme support
 - [X] - Add scene support
