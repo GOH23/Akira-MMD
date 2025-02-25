@@ -1,4 +1,4 @@
-Akira MMD | The Best Motion Capture MMD Web App based on mediapipe
+# Akira MMD | The Best Motion Capture MMD Web App based on mediapipe
 ![20250221_103503](https://github.com/user-attachments/assets/af34956c-1e64-4673-9c4c-65fbd4a0142c)
 ## How to use
 1. Load dependences
