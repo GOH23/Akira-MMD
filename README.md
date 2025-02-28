@@ -1,13 +1,13 @@
 # Akira MMD - Next-Gen Motion Capture for MMD Community 
 
-[![GitHub license](https://img.shields.io/badge/License-Custom-ff69b4)](https://github.com/yourusername/akira-mmd/blob/main/LICENSE)
-[![Project Version](https://img.shields.io/badge/version-0.7.0-brightgreen)](https://github.com/yourusername/akira-mmd/releases)
+[![GitHub license](https://img.shields.io/badge/License-Custom-ff69b4)](https://github.com/GOH23/akira-mmd/blob/main/LICENSE)
+[![Project Version](https://img.shields.io/badge/version-0.7.0-brightgreen)](https://github.com/GOH23/akira-mmd/releases)
 [![Open Issues](https://img.shields.io/github/issues/GOH23/akira-mmd)](https://github.com/GOH23/akira-mmd/issues)
 
 **Revolutionizing MMD animation with real-time motion capture powered by MediaPipe!**  
 Create professional animations in minutes, not hours. Perfect for both beginners and experienced MMD creators.
 
-![Akira MMD Interface Demo](https://github.com/user-attachments/assets/af34956c-1e64-4673-9c4c-65fbd4a0142c)
+![Akira MMD Interface Demo](https://github.com/user-attachments/assets/83243129-ba08-4e31-9714-8132b258efb3)
 
 ## 🌟 Why Choose Akira MMD?
 
