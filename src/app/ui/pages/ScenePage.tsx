@@ -11,10 +11,13 @@ import { AkiraButton } from '../components/AkiraButton'
 import { ArrowsAltOutlined, EyeInvisibleOutlined, EyeOutlined, MutedOutlined, PauseOutlined, PlayCircleOutlined, SettingFilled, SoundOutlined, VideoCameraFilled } from '@ant-design/icons'
 
 import { AkiraDrawer } from "../components/AkiraDrawer";
-import { FilesetResolver, HolisticLandmarker } from "@mediapipe/tasks-vision";
+import { FilesetResolver, GestureRecognizer, HolisticLandmarker } from "@mediapipe/tasks-vision";
 import { SkeletonShow } from "../logic/Skeleton";
-import { MotionModel } from '../logic/MotionModel'
+import { MotionModel, SettingsType } from '../logic/MotionModel'
 import AkiraRadioButton from '../components/AkiraRadioButton'
+import { IsUUID } from '../logic/extentions'
+import { useSavedModel } from '../hookes/useSavedModel'
+
 
 export default function ScenePage() {
     const searchParams = useSearchParams()
@@ -30,6 +33,7 @@ export default function ScenePage() {
         SettingsDrawerOpened: false,
         SkeletonModelOpened: false
     });
+    const { GetModelData } = useSavedModel((state) => state);
     function OpenDrawer(selected: keyof typeof DrawerStates, value: boolean) {
         const newState: typeof DrawerStates = {
             ...DrawerStates,
@@ -41,11 +45,12 @@ export default function ScenePage() {
     //video
     const VideoCurrentRef = useRef<HTMLVideoElement>(null)
     const SkeletonCanvasRef = useRef<HTMLCanvasElement>(null);
-    const [VideoState, SetVideoState] = useState<{
+    type videoState = {
         isPlaying: boolean,
         SkeletonPlaced: boolean,
         SoundEnabled: boolean
-    }>({
+    }
+    const [VideoState, SetVideoState] = useState<videoState>({
         isPlaying: false,
         SkeletonPlaced: true,
         SoundEnabled: false
@@ -58,7 +63,15 @@ export default function ScenePage() {
         SetVideoState(newState)
     }
     //mediapipe with drawing
+    const [SettingsMotionCapture, SetSettingsMotionCapture] = useState<SettingsType>({
+        BodyCalculate: true,
+        LegsCalculate: true,
+        ArmsCalculate: true,
+        HeadCalculate: true,
+        FacialAndEyesCalculate: true
+    })
     const [MotionCap, SetMotionCap] = useState(new MotionModel())
+    const GestureRef = useRef<GestureRecognizer>(null)
     const HolisticRef = useRef<HolisticLandmarker>(null)
     const [OnHolisticLoaded, SetHolisticLoaded] = useState(false)
     const loadHolistic = async () => {
@@ -71,9 +84,21 @@ export default function ScenePage() {
                         "https://storage.googleapis.com/mediapipe-models/holistic_landmarker/holistic_landmarker/float16/latest/holistic_landmarker.task",
                     delegate: "GPU",
                 },
-
+                minFaceDetectionConfidence: 0.8,
+                minFaceSuppressionThreshold: 0.2,
+                minFacePresenceConfidence: 0.7,
+                minPoseDetectionConfidence: 0.6,
+                minPoseSuppressionThreshold: 0.2,
+                minHandLandmarksConfidence: 0.7,
                 runningMode: "VIDEO",
             })
+            // const gestureRecognizer = await GestureRecognizer.createFromOptions(vision, {
+            //     baseOptions: {
+            //         modelAssetPath: "https://storage.googleapis.com/mediapipe-tasks/gesture_recognizer/gesture_recognizer.task"
+            //     },
+            //     numHands: 2
+            // });
+            //GestureRef.current = gestureRecognizer;
             HolisticRef.current = holisticLandmarker;
         })
     }
@@ -81,12 +106,12 @@ export default function ScenePage() {
 
         if (HolisticRef.current && VideoCurrentRef.current && !VideoCurrentRef.current.paused && VideoCurrentRef.current.readyState >= 2) {
             HolisticRef.current!.detectForVideo(VideoCurrentRef.current, performance.now(), (res) => {
-                if (VideoState.SkeletonPlaced){
+                if (VideoState.SkeletonPlaced) {
                     SkeletonShow.onShowSkeleton(SkeletonCanvasRef, res)
                 }
                 if (MMDStates.MMDRuntime && MMDStates.MMDModel) {
-                    if (!MotionCap._Model) MotionCap.init(MMDStates.MMDModel);
-                    MotionCap.motionCalculate(res)
+
+                    MotionCap.motionCalculate(res,SettingsMotionCapture)
                 }
             });
         }
@@ -97,7 +122,6 @@ export default function ScenePage() {
     }, [])
     useEffect(() => {
         if (HolisticRef.current) {
-
             console.log("Holistic loaded");
             SetHolisticLoaded(true)
         }
@@ -115,20 +139,46 @@ export default function ScenePage() {
     const [MaterialBuilder, _] = useState(new MmdStandardMaterialBuilder())
     const convRef = useRef<HTMLCanvasElement>(null)
 
-    const loadModel = async (eng: Engine, modelScene: Scene, modelName: string, mmdRuntime: MmdWasmRuntime, shadowGenerator: ShadowGenerator) => {
+    const loadModel = async (
+        eng: Engine,
+        modelScene: Scene,
+        modelName: string,
+        mmdRuntime: MmdWasmRuntime,
+        shadowGenerator: ShadowGenerator
+    ) => {
+
         if (MMDStates.MMDModel && MMDStates.MMDAssetContainer) {
-            shadowGenerator.removeShadowCaster(MMDStates.MMDModel.mesh);
-            MMDStates.MMDModel.mesh.dispose();
+            shadowGenerator?.removeShadowCaster(MMDStates.MMDModel.mesh);
+            MMDStates.MMDModel.mesh.dispose(true, true);
             mmdRuntime.destroyMmdModel(MMDStates.MMDModel);
             MMDStates.MMDAssetContainer.removeAllFromScene();
+            MMDStates.MMDAssetContainer.dispose();
         }
-        const modelMesh: [AbstractMesh, AssetContainer] = await loadAssetContainerAsync(
-            modelName,
+
+        if (!modelName) throw new Error("Invalid model name");
+        let modelUrl: string;
+        let blobUrl: string | null = null;
+
+        if (IsUUID(modelName)) {
+            const modelData = await GetModelData(modelName);
+            if (!modelData) throw new Error("Model data not found");
+            const blob = new Blob([modelData], { type: "application/octet-stream" });
+            blobUrl = URL.createObjectURL(blob);
+            modelUrl = blobUrl;
+        } else {
+            modelUrl = modelName;
+        }
+
+        // Load assets
+        const [modelMesh, assetContainer] = await loadAssetContainerAsync(
+            modelUrl,
             modelScene,
             {
-                rootUrl: `${window.location.origin}/model/`,
-                onProgress(event) {
-                    eng.loadingUIText = `\n\n\nLoading model... ${event.loaded}/${event.total} (${Math.floor(event.loaded * 100 / event.total)}%)`
+                rootUrl: IsUUID(modelName) ? undefined : `${window.location.origin}/model/`,
+                pluginExtension: IsUUID(modelName) ? ".bpmx" : undefined,
+                onProgress: (event) => {
+                    eng.loadingUIText = `\n\n\nLoading model... ${event.loaded}/${event.total} 
+                            (${Math.floor((event.loaded / event.total) * 100)}%)`;
                 },
                 pluginOptions: {
                     mmdmodel: {
@@ -137,18 +187,38 @@ export default function ScenePage() {
                         loggingEnabled: true
                     }
                 }
-            }).then((res) => {
-                res.addAllToScene();
-                for (const mesh of res.meshes[0].metadata.meshes) mesh.receiveShadows = true;
-                shadowGenerator.addShadowCaster(res.meshes[0]);
-                return [res.meshes[0], res]
-            })
+            }
+        ).then(res => {
+            // Validate loaded assets
+            if (!res.meshes || res.meshes.length === 0) {
+                throw new Error("No meshes found in asset container");
+            }
 
-        return {
-            Model: modelMesh[0] as Mesh,
-            AssetContainer: modelMesh[1]
-        }
-    }
+            const mainMesh = res.meshes[0];
+            res.addAllToScene();
+
+            // // Configure shadows
+            // if (mainMesh.metadata?.meshes) {
+            //     for (const mesh of mainMesh.metadata.meshes) {
+            //         mesh.receiveShadows = true;
+            //     }
+            // }
+
+            // shadowGenerator?.addShadowCaster(mainMesh);
+            return [mainMesh, res] as [AbstractMesh, AssetContainer];
+        }).finally(() => {
+            // Cleanup blob URL after loading
+            if (blobUrl) URL.revokeObjectURL(blobUrl);
+        });
+
+        // Update state
+        const result = {
+            Model: modelMesh as Mesh,
+            AssetContainer: assetContainer
+        };
+        return result;
+
+    };
 
     useEffect(() => {
         const engine = new Engine(convRef.current, true, {
@@ -192,10 +262,7 @@ export default function ScenePage() {
             ground.receiveShadows = true;
             shadowGenerator.addShadowCaster(ground);
 
-            //mmdRuntime.setCamera(camera);
-
             mmdscene.onAfterRenderObservable.addOnce(() => engine.hideLoadingUI());
-
             if (scene) {
                 Promise.all([loadModel(engine, mmdscene, scene.modelPathOrLink, mmdRuntime, shadowGenerator)]).then(([res]) => {
                     SetMMDStates({
@@ -220,15 +287,16 @@ export default function ScenePage() {
     }, [VideoState])
     //rerender model with shadow
     useEffect(() => {
-        
+
         if (MMDStates.MMDEngine && MMDStates.MMDScene && MMDStates.MMDRuntime && MMDStates.MMDShadowManager && scene && scene.modelPathOrLink) {
             loadModel(MMDStates.MMDEngine, MMDStates.MMDScene, scene!.modelPathOrLink, MMDStates.MMDRuntime, MMDStates.MMDShadowManager).then((res) => {
-                SetMMDStates({ ...MMDStates, MMDModel: MMDStates.MMDRuntime?.createMmdModel(res.Model), MMDAssetContainer: res.AssetContainer })
+                SetMMDStates({ ...MMDStates, MMDModel: MMDStates.MMDRuntime?.createMmdModel(res.Model), MMDAssetContainer: res.AssetContainer });
                 MMDStates.MMDEngine!.hideLoadingUI();
             })
         }
         console.log("Changed to " + scene?.modelPathOrLink)
     }, [scene?.modelPathOrLink])
+
     //rerender scene
     useEffect(() => {
 
@@ -244,10 +312,14 @@ export default function ScenePage() {
 
         }
     }, [MMDStates.MMDEngine, MMDStates.MMDScene])
+    useEffect(() => {
+        if (MMDStates.MMDModel && MMDStates.MMDEngine) MotionCap.init(MMDStates.MMDModel, MMDStates.MMDEngine);
+    }, [MMDStates.MMDModel])
     //
     useEffect(() => {
         setScene(scenes.find((el) => el.id == sceneId))
     }, [scenes, sceneId])
+
     return (<div className="relative">
         <canvas ref={convRef} style={{ width: "100%", height: "100vh" }} className="" />
         {/* Controls */}
@@ -258,21 +330,54 @@ export default function ScenePage() {
             <AkiraButton className="size-[45px]" onClick={() => OpenDrawer("VideoDrawerOpened", true)}>
                 <VideoCameraFilled />
             </AkiraButton>
-            <AkiraButton disabled className="size-[45px]" onClick={() => OpenDrawer("SettingsDrawerOpened", true)}>
+            <AkiraButton className="size-[45px]" onClick={() => OpenDrawer("SettingsDrawerOpened", true)}>
                 <SettingFilled />
             </AkiraButton>
         </div>
-        {/* Motion capture settings [Update 0.7.1b] */}
-        
-        <AkiraDrawer closable title="Settings" open={DrawerStates.SettingsDrawerOpened} onClose={() => { OpenDrawer("SettingsDrawerOpened", false) }} >
-            {/* Akira motion capture radio button settings */}
-            <AkiraRadioButton />
+        <AkiraDrawer removeBlurButton closable title="Settings" open={DrawerStates.SettingsDrawerOpened} onClose={() => { OpenDrawer("SettingsDrawerOpened", false) }} >
+            {/* <p className='text-ForegroundColor text-lg text-center font-bold'>Finger logic</p> */}
+            {/* <div className='flex justify-around mb-3'>
+
+                <div className='flex flex-col text-base gap-y-2 text-ForegroundColor'>
+                    <p>Finger rotation calculation</p>
+                    <p>Finger gestures [Experimental]</p>
+                </div>
+                <div className='flex gap-y-2 flex-col justify-center items-center'>
+                    <AkiraRadioButton />
+                    <AkiraRadioButton />
+
+                </div>
+            </div> */}
+            <p className='text-ForegroundColor text-lg text-center font-bold'>Motion capture settings</p>
+            <div className='flex justify-around mb-3'>
+
+                <div className='flex flex-col text-base gap-y-3 text-ForegroundColor'>
+                    <p>Move body</p>
+                    <p>Move legs</p>
+                    <p>Move arms</p>
+                    <p>Move head</p>
+                    <p>Calculate facial and eyes</p>
+                </div>
+                <div className='flex gap-y-3 flex-col justify-center items-center'>
+                    {Object.keys(SettingsMotionCapture).map((el, ind) => <AkiraRadioButton
+                        key={ind}
+                        checked={SettingsMotionCapture[el as keyof typeof SettingsMotionCapture]}
+                        onChange={() => {
+                            SetSettingsMotionCapture((prevState) => {
+                                var newState = { ...prevState }
+                                newState[el as keyof typeof SettingsMotionCapture] = !prevState[el as keyof typeof SettingsMotionCapture]
+                                return newState;
+                            })
+                        }}
+                    />)}
+                </div>
+            </div>
         </AkiraDrawer>
         {/* Motion Video */}
-        <AkiraDrawer closable title="Select Video" open={DrawerStates.VideoDrawerOpened} onClose={() => { OpenDrawer("VideoDrawerOpened", false) }} loading={!OnHolisticLoaded}>
+        <AkiraDrawer removeBlurButton closable title="Select Video" open={DrawerStates.VideoDrawerOpened} onClose={() => { OpenDrawer("VideoDrawerOpened", false) }} loading={!OnHolisticLoaded}>
             <AkiraButton className="w-full p-0">
                 <div className="w-full">
-                    <label htmlFor="file" className='cursor-pointer text-white flex justify-center items-center h-[32px] w-full'>Load Video File</label>
+                    <label htmlFor="file" className='cursor-pointer text-white flex justify-center items-center h-[25px] w-full'>Load Video File</label>
                     <input id="file" type="file" className="hidden" accept="video/*" onChange={async (event) => {
                         const file = event.target.files![0]
                         const url = URL.createObjectURL(file);
@@ -281,10 +386,9 @@ export default function ScenePage() {
                     }} />
                 </div>
             </AkiraButton>
-            {/* Video Controls */}
             <div className='flex m-1 justify-center'>
                 <div className="w-fit relative">
-                    <video muted={VideoState.SoundEnabled} ref={VideoCurrentRef} controls={false} className="rounded-md max-h-[400px] w-full min-h-[200px]" />
+                    <video onPause={() => MotionCap.endRecordMp4()} muted={VideoState.SoundEnabled} ref={VideoCurrentRef} controls={false} className="rounded-md max-h-[400px] w-full min-h-[200px]" />
                     <canvas ref={SkeletonCanvasRef} className={`${VideoState.SkeletonPlaced ? "absolute" : "hidden"} top-0 h-full w-full`} />
                 </div>
             </div>
@@ -298,6 +402,17 @@ export default function ScenePage() {
                 <button id="SoundEnabled" className="p-2 size-[45px] font-bold cursor-pointer  hover:bg-BackgroundHoverButton duration-700 flex justify-center items-center aspect-square rounded bg-BackgroundButton text-white" onClick={onClicked}>
                     {!VideoState.SoundEnabled ? <SoundOutlined /> : <MutedOutlined />}
                 </button>
+            </div>
+            <div className='mt-2 flex flex-col gap-y-2'>
+                <AkiraButton className="w-full" onClick={() => {
+                    if (VideoCurrentRef.current && VideoCurrentRef.current.src)
+                        MotionCap.startRecordMp4(VideoCurrentRef.current)
+                }}>
+                    {MotionCap._Recorder && MotionCap._Recorder.isRecording ? "Stop Record video" : "Record video"}
+                </AkiraButton>
+                <AkiraButton disabled className="w-full" onClick={() => { }}>
+                    Export to vmd
+                </AkiraButton>
             </div>
         </AkiraDrawer>
     </div>)

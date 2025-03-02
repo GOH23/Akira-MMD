@@ -4,12 +4,12 @@ type ScenesType = {
     id: string
     modelPathOrLink: string,
     sceneName: string,
-    
+    modelName: string
 }
 interface ScenesState  {
     scenes: ScenesType[],
     addScene: (scene: ScenesType)=>void,
-    changeSceneModel: (id: string,modelPathOrLink: string)=>void
+    changeSceneModel: (id: string,modelPathOrLink: string,modelName?: string)=>void
     removeScene: (id: string)=>void
 }
 const useScenes = create<ScenesState>()(
@@ -20,8 +20,10 @@ const useScenes = create<ScenesState>()(
             removeScene: (id: string) => set((state) => ({
                 scenes: state.scenes.filter((el, i) => el.id !== id)
             })),
-            changeSceneModel: (id, modelPathOrLink)=>set((state)=>{
-                state.scenes.find((el)=>el.id == id)!.modelPathOrLink = modelPathOrLink;
+            changeSceneModel: (id, modelPathOrLink,modelName)=>set((state)=>{
+                var scene = state.scenes.find((el)=>el.id == id)!;
+                scene.modelPathOrLink = modelPathOrLink;
+                scene.modelName = modelName || modelPathOrLink;
                 return ({
                     scenes: [...state.scenes]
                 })

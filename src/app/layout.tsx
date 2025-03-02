@@ -30,7 +30,7 @@ export default function RootLayout({
             <HeaderLayout />
             <Layout>
               <Content >
-                <Suspense>
+                <Suspense fallback={<p>Loading</p>}>
                   {children}
                 </Suspense>
               </Content>
