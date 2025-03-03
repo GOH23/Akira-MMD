@@ -25,7 +25,9 @@ export default function HeaderLayout() {
     const timerRef = useRef<NodeJS.Timeout>(null);
     const [ModalDeleteSceneOpened, SetModalDeleteSceneOpened] = useState(false);
     const [SelectedScene, SetSelectedScene] = useState<ScenesType>()
-    const [api, contextHolder] = notification.useNotification();
+    const [api, contextHolder] = notification.useNotification({
+        
+    });
     useEffect(() => {
         if (SelectedScene) SetModalDeleteSceneOpened(!ModalDeleteSceneOpened);
     }, [SelectedScene])
@@ -67,7 +69,7 @@ export default function HeaderLayout() {
             {contextHolder}
             <div className={!collapsed ? "flex items-center px-1 h-10 w-full" : "flex justify-center items-center  my-2 h-10 w-full"}>
                 <p className={`text-center font-bold text-lg text-ForegroundColor`}>
-                    Akira v0.7.0b-2
+                    Akira v0.7.0
                 </p>
 
                 {!collapsed && <button className="ml-auto text-2xl text-ForegroundColor" onClick={() => { setTheme(theme == "dark" ? "purple" : theme == "purple" ? "light" : "dark") }}>
@@ -83,12 +85,13 @@ export default function HeaderLayout() {
                         addScene({
                             sceneName: `Scene ${scenes.length + 1}`,
                             id: crypto.randomUUID(),
-                            modelPathOrLink: "Black.bpmx"
+                            modelPathOrLink: "Black.bpmx",
+                            modelName: "Black.bpmx"
                         });
                         api.success({
                             message: "Added scene",
                             pauseOnHover: true,
-                            className: ""
+                            className: "bg-MenuItemBg rounded-md !text-white"
                         })
                     }
 
@@ -153,6 +156,6 @@ export default function HeaderLayout() {
             </div>
 
         </AkiraModalDialog>
-        <SettingsModal opened={SettingsOpened} SetOpened={() => SetSettingsOpened(!SettingsOpened)} />
+        <SettingsModal  opened={SettingsOpened} SetOpened={() => SetSettingsOpened(!SettingsOpened)} />
     </ConfigProvider>
 }

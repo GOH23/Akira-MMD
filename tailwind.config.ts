@@ -15,7 +15,7 @@ export default {
         BackgroundButton: "var(--bg-button-color)",
         BackgroundButtonDisabled: "var(--bg-button-disabled)",
         BackgroundHoverButton: "var(--bg-hover-button-color)",
-        MenuItemBg: "var(--menu-layout-bg)"
+        MenuItemBg: "var(--menu-layout-bg)"        
       },
     },
   },

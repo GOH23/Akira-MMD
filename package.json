@@ -1,7 +1,7 @@
 {
   "name": "akira",
   "description": "Motion capture",
-  "version": "0.7.0b-2",
+  "version": "0.7.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -23,6 +23,7 @@
     "antd-style": "^3.7.1",
     "babylon-mmd": "^0.59.1",
     "framer-motion": "^11.15.0",
+    "idb-keyval": "^6.2.1",
     "kalidokit": "^1.1.5",
     "next": "14.2.16",
     "next-themes": "^0.4.4",

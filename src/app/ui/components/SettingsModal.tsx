@@ -1,14 +1,16 @@
 "use client"
-
+import { Select } from "antd";
 import { Input, Modal } from "antd"
 import { useState, useEffect, useRef } from "react";
 import { useScenes, ScenesType } from "../hookes/useScenes";
 import { useSearchParams } from "next/navigation";
 //babylon-mmd
-import { AssetContainer, Color3, Color4, DirectionalLight, Engine, HemisphericLight, loadAssetContainerAsync, Mesh, MeshBuilder, Scene, SceneLoader, ShadowGenerator, Vector3 } from "@babylonjs/core";
+import { appendSceneAsync, AssetContainer, Color3, Color4, DirectionalLight, Engine, HemisphericLight, loadAssetContainerAsync, LoadFile, Mesh, MeshBuilder, Scene, SceneLoader, ShadowGenerator, Vector3 } from "@babylonjs/core";
 import { MmdCamera, MmdMesh, MmdRuntime, VmdLoader } from "babylon-mmd";
 import { useMMDModels } from '../hookes/useMMDModels';
 import { AkiraButton } from './AkiraButton';
+import { useSavedModel } from "../hookes/useSavedModel";
+import { IsUUID } from "../logic/extentions";
 
 const modalStyles = {
     mask: {
@@ -29,6 +31,7 @@ export default function SettingsModal({ opened, SetOpened }: { opened: boolean, 
     const [SubModalOpened, SetSubModalOpened] = useState(false)
     const sceneId = searchParams.get('sceneId')
     const { scenes, changeSceneModel } = useScenes((state) => state);
+    const { ModelPaths, AddModelPath, GetModelData } = useSavedModel((state) => state);
     const [scene, setScene] = useState<ScenesType>();
 
     //babylon-mmd
@@ -44,24 +47,36 @@ export default function SettingsModal({ opened, SetOpened }: { opened: boolean, 
     //load mmd model
     const loadMMDModel = async (path?: string, shadowGenerator?: ShadowGenerator) => {
         if (MMDAssetContainer) {
-            
+
             MMDAssetContainer.removeAllFromScene();
             if (MMDAssetContainer.meshes[0]) {
-                
+
                 for (const mesh of MMDAssetContainer.meshes[0].metadata.meshes) mesh.receiveShadows = false;
                 shadowGenerator?.removeShadowCaster(MMDAssetContainer.meshes[0]);
             }
 
         }
         if (MMDScene) {
-            const mmdMesh = await loadAssetContainerAsync(path ?? "Ganyubikini.bpmx", MMDScene, { rootUrl: `${window.location.origin}/model/` })
-                .then((result) => {
-                    SetMMDAssetContainer(result);
-                    result.addAllToScene();
-                    console.log("Load model");
-                    return result.meshes[0] as MmdMesh;
+            let modelUrl: string;
+            if (path && IsUUID(path)) {
+                const modelData = await GetModelData(path);
+                if (!modelData) throw new Error("Model data not found");
+                const blob = new Blob([modelData], { type: "application/octet-stream" });
+                modelUrl = URL.createObjectURL(blob);
+            } else {
+                modelUrl = path ?? "Ganyubikini.bpmx";
+            }
+            const mmdMesh = await loadAssetContainerAsync(modelUrl, MMDScene, {
+                rootUrl: modelUrl.startsWith("blob:") ? undefined : `${window.location.origin}/model/`,
+                pluginExtension: modelUrl.startsWith("blob:") ? ".bpmx" : undefined
+            })
+            .then((result) => {
+                SetMMDAssetContainer(result);
+                result.addAllToScene();
+                console.log("Load model");
+                return result.meshes[0] as MmdMesh;
 
-                });
+            });
             for (const mesh of mmdMesh.metadata.meshes) mesh.receiveShadows = true;
             if (shadowGenerator) shadowGenerator.addShadowCaster(mmdMesh);
         }
@@ -158,12 +173,22 @@ export default function SettingsModal({ opened, SetOpened }: { opened: boolean, 
             <div className="flex flex-col gap-y-2">
                 <div className="flex justify-center items-center gap-x-3">
                     <p className="text-ForegroundColor">Selected Model</p>
-                    <Input value={scene?.modelPathOrLink} className="max-w-52" readOnly />
+                    <Input value={scene?.modelName} className="max-w-52" readOnly />
                     <AkiraButton onClick={() => SetSubModalOpened(true)}>Select Model</AkiraButton>
                 </div>
                 <div className="flex items-center gap-x-3">
                     <p className="text-ForegroundColor">Selected Language</p>
-                    <Input className="max-w-52" readOnly />
+                    <Select defaultActiveFirstOption className="w-52" >
+                        <Select.Option key={0}>
+                            Русский
+                        </Select.Option>
+                        <Select.Option key={1}>
+                            English
+                        </Select.Option>
+                        <Select.Option key={2}>
+                            Japanese
+                        </Select.Option>
+                    </Select>
 
                 </div>
             </div>
@@ -181,14 +206,37 @@ export default function SettingsModal({ opened, SetOpened }: { opened: boolean, 
         }>
             <div className="flex gap-x-4 h-[500px]">
                 <div className="basis-1/2">
-                    <AkiraButton className="my-2" disabled fillWidth>Add Model</AkiraButton>
+                    <input type="file" id="modelUpload" accept=".bpmx" className="hidden" onChange={async (event) => {
+                        var file = event.target.files![0];
+                        AddModelPath(file);
+                    }} />
+                    <label htmlFor="modelUpload" className={`block text-center cursor-pointer bg-BackgroundButton w-full my-2 hover:bg-BackgroundHoverButton text-ForegroundButton rounded-md duration-700 p-2 font-bold`}>
+                        Add Model
+                    </label>
                     <div>
                         {models.map((el, ind) => <div onClick={() => {
                             if (sceneId) {
                                 changeSceneModel(sceneId, el.ModelPath)
                                 loadMMDModel(el.ModelPath, mmdShadowGenerator)
                             }
-                        }} key={ind} className="bg-BackgroundButton font-bold duration-700 hover:bg-BackgroundHoverButton cursor-pointer text-ForegroundButton p-3"><p>{el.ModelName}</p></div>)}
+                        }} key={ind} className="bg-BackgroundButton font-bold duration-700 hover:bg-BackgroundHoverButton cursor-pointer text-ForegroundButton p-3">
+                            <p>{el.ModelName}</p>
+                        </div>)}
+                        {ModelPaths.map((el, ind) => <div onClick={async () => {
+                            if (sceneId) {
+                                const data = await GetModelData(el.id);
+
+                                if (data && MMDScene) {
+                                    const blob = new Blob([data]);
+                                    const url = URL.createObjectURL(blob);
+                                    changeSceneModel(sceneId, el.id, el.fileName)
+                                    loadMMDModel(url, mmdShadowGenerator)
+                                }
+
+                            }
+                        }} key={ind} className="bg-BackgroundButton font-bold duration-700 hover:bg-BackgroundHoverButton cursor-pointer text-ForegroundButton p-3">
+                            <p>{el.fileName}</p>
+                        </div>)}
                     </div>
                 </div>
                 <div className="basis-1/2 relative">

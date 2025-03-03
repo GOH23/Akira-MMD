@@ -20,5 +20,13 @@ export function useMMDModels(): MMDModel[]{
             ModelName: "Miku | [Black dress]",
             ModelPath: "Black.bpmx"
         },
+        {
+            ModelName: "Mita | Miside",
+            ModelPath: "Mita.bpmx"
+        },
+        {
+            ModelName: "Cappie | Miside",
+            ModelPath: "Cappie.bpmx"
+        },
     ]
 }
