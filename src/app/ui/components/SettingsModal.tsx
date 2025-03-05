@@ -11,7 +11,7 @@ import { useMMDModels } from '../hookes/useMMDModels';
 import { AkiraButton } from './AkiraButton';
 import { useSavedModel } from "../hookes/useSavedModel";
 import { IsUUID } from "../logic/extentions";
-
+import { DeleteFilled } from "@ant-design/icons";
 const modalStyles = {
     mask: {
         backdropFilter: 'blur(10px)',
@@ -31,7 +31,7 @@ export default function SettingsModal({ opened, SetOpened }: { opened: boolean, 
     const [SubModalOpened, SetSubModalOpened] = useState(false)
     const sceneId = searchParams.get('sceneId')
     const { scenes, changeSceneModel } = useScenes((state) => state);
-    const { ModelPaths, AddModelPath, GetModelData } = useSavedModel((state) => state);
+    const { ModelPaths, AddModelPath, GetModelData, RemoveModelPath } = useSavedModel((state) => state);
     const [scene, setScene] = useState<ScenesType>();
 
     //babylon-mmd
@@ -70,13 +70,13 @@ export default function SettingsModal({ opened, SetOpened }: { opened: boolean, 
                 rootUrl: modelUrl.startsWith("blob:") ? undefined : `${window.location.origin}/model/`,
                 pluginExtension: modelUrl.startsWith("blob:") ? ".bpmx" : undefined
             })
-            .then((result) => {
-                SetMMDAssetContainer(result);
-                result.addAllToScene();
-                console.log("Load model");
-                return result.meshes[0] as MmdMesh;
+                .then((result) => {
+                    SetMMDAssetContainer(result);
+                    result.addAllToScene();
+                    console.log("Load model");
+                    return result.meshes[0] as MmdMesh;
 
-            });
+                });
             for (const mesh of mmdMesh.metadata.meshes) mesh.receiveShadows = true;
             if (shadowGenerator) shadowGenerator.addShadowCaster(mmdMesh);
         }
@@ -156,7 +156,7 @@ export default function SettingsModal({ opened, SetOpened }: { opened: boolean, 
     useEffect(() => {
         loadMMDModel(scene?.modelPathOrLink)
     }, [MMDScene])
-
+    
     const SaveSettings = () => {
         SetOpened();
     }
@@ -176,7 +176,7 @@ export default function SettingsModal({ opened, SetOpened }: { opened: boolean, 
                     <Input value={scene?.modelName} className="max-w-52" readOnly />
                     <AkiraButton onClick={() => SetSubModalOpened(true)}>Select Model</AkiraButton>
                 </div>
-                <div className="flex items-center gap-x-3">
+                {/* <div className="flex items-center gap-x-3">
                     <p className="text-ForegroundColor">Selected Language</p>
                     <Select defaultActiveFirstOption className="w-52" >
                         <Select.Option key={0}>
@@ -190,7 +190,7 @@ export default function SettingsModal({ opened, SetOpened }: { opened: boolean, 
                         </Select.Option>
                     </Select>
 
-                </div>
+                </div> */}
             </div>
         </Modal>
         <Modal title={<div className="bg-transparent">
@@ -213,7 +213,7 @@ export default function SettingsModal({ opened, SetOpened }: { opened: boolean, 
                     <label htmlFor="modelUpload" className={`block text-center cursor-pointer bg-BackgroundButton w-full my-2 hover:bg-BackgroundHoverButton text-ForegroundButton rounded-md duration-700 p-2 font-bold`}>
                         Add Model
                     </label>
-                    <div>
+                    <div className="overflow-y-auto max-h-[400px]">
                         {models.map((el, ind) => <div onClick={() => {
                             if (sceneId) {
                                 changeSceneModel(sceneId, el.ModelPath)
@@ -234,23 +234,20 @@ export default function SettingsModal({ opened, SetOpened }: { opened: boolean, 
                                 }
 
                             }
-                        }} key={ind} className="bg-BackgroundButton font-bold duration-700 hover:bg-BackgroundHoverButton cursor-pointer text-ForegroundButton p-3">
+                        }} key={ind} className="bg-BackgroundButton flex justify-between font-bold duration-700 hover:bg-BackgroundHoverButton cursor-pointer text-ForegroundButton p-3">
                             <p>{el.fileName}</p>
+                            <DeleteFilled className="hover:text-red-400 duration-500 " onClick={() => {
+                                if (sceneId) {
+                                    changeSceneModel(sceneId,"Black.bpmx")
+                                    RemoveModelPath(el);
+                                    window.location.reload();
+                                }
+                            }
+                            } />
                         </div>)}
                     </div>
                 </div>
                 <div className="basis-1/2 relative">
-                    {/* Controls */}
-                    <div className="absolute right-0 gap-x-2 flex">
-                        {/* Reload */}
-                        {/* <button className="w-full text-[20px] bg-BackgroundButton text-ForegroundColor rounded-md duration-700 p-2 font-bold hover:bg-BackgroundHoverButton">
-
-                        </button> */}
-                        {/* Play Animation */}
-                        {/* <button onClick={() => setPlayAnimation(!PlayAnimation)} className="w-full text-[20px]  size-[45px] aspect-square bg-BackgroundButton text-ForegroundColor rounded-md duration-700 p-2 font-bold hover:bg-BackgroundHoverButton">
-                            {!PlayAnimation ? <PlayCircleOutlined /> : <PauseCircleOutlined />}
-                        </button> */}
-                    </div>
                     <canvas ref={conv} className="shadow-md rounded-md m-1" style={{ width: '100%', height: '100%' }} />
                 </div>
             </div>

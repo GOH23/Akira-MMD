@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { set as setKey,get as getValue } from 'idb-keyval';
+import { set as setKey,get as getValue,del as delValue } from 'idb-keyval';
 type ModelPath = {
     id: string
     fileName: string
@@ -28,9 +28,12 @@ const useSavedModel = create<SavedModelPath>()(
             async GetModelData(id) {
                 return getValue<Uint8Array>(id);
             },
-            RemoveModelPath: (modelPath: ModelPath) => set((state) => ({
-                ModelPaths: state.ModelPaths.filter((el, i) => el.id !== modelPath.id)
-            })),
+            RemoveModelPath: (modelPath: ModelPath) => set((state) => {
+                delValue(modelPath.id)
+                return ({
+                    ModelPaths: state.ModelPaths.filter((el, i) => el.id !== modelPath.id)
+                })
+            }),
         }), {
         name: "models",
         version: 1

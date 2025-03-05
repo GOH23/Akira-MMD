@@ -1,8 +1,9 @@
 import { Engine, Matrix, Quaternion, Space, Vector3, VideoRecorder } from "@babylonjs/core";
-import { HolisticLandmarkerResult, NormalizedLandmark } from "@mediapipe/tasks-vision";
+import { GestureRecognizerResult, HolisticLandmarkerResult, NormalizedLandmark } from "@mediapipe/tasks-vision";
 import { MmdModel, MmdWasmModel } from "babylon-mmd";
 import { IMmdRuntimeLinkedBone } from "babylon-mmd/esm/Runtime/IMmdRuntimeLinkedBone";
 import { faceKeypoints, handKeypoints, poseKeypoints } from "./MotionTypes";
+import { OneEuroFilter } from '1eurofilter'
 export type BoneType = "hand" | "pose" | "face"
 // Константы для имен костей
 enum MMDModelBones {
@@ -81,16 +82,17 @@ export class MotionModel {
         this._bones = this._Model.skeleton.bones;
     }
 
-    motionCalculate(holisticResult: HolisticLandmarkerResult, {
-        BodyCalculate,
-        LegsCalculate,
-        FacialAndEyesCalculate,
-        ArmsCalculate,
-        HeadCalculate,
-
-    }: SettingsType) {
+    motionCalculate(holisticResult: HolisticLandmarkerResult, settings: SettingsType, gestureRes?: GestureRecognizerResult) {
         if (!this._Model) return;
         var { mainBody, leftWorldFingers, rightWorldFingers, faceLandmarks } = new HolisticParser(holisticResult);
+        console.log(settings);
+        for (let index = 0; index < mainBody.length; index++) {
+            const element = mainBody[index];
+            mainBody[index].x = new OneEuroFilter(30, 1, 1, 2).filter(element.x, performance.now())
+            mainBody[index].y = new OneEuroFilter(30, 1, 1, 2).filter(element.y, performance.now())
+            mainBody[index].z = new OneEuroFilter(30, 1, 1, 2).filter(element.z, performance.now())
+
+        }
         var UpperBodyRotation = this.calculateUpperBodyRotation(mainBody);
         var LowerBodyRotation = this.calculateLowerBodyRotation(mainBody);
         const HeadRotation = this.calculateHeadRotation(mainBody, UpperBodyRotation);
@@ -136,32 +138,39 @@ export class MotionModel {
             "right_knee",
             "right_ankle",
             LowerBodyRotation);
-        if (BodyCalculate) this.moveBody(mainBody);
-        this.setRotation(MMDModelBones.LowerBody, LowerBodyRotation);
-        this.setRotation(MMDModelBones.UpperBody, UpperBodyRotation);
-        if (ArmsCalculate) {
+        if (settings.BodyCalculate) {
+            this.moveBody(mainBody);
+            this.setRotation(MMDModelBones.LowerBody, LowerBodyRotation);
+            this.setRotation(MMDModelBones.UpperBody, UpperBodyRotation);
+        }
+
+        if (settings.ArmsCalculate) {
+            //right
             this.setRotation(MMDModelBones.RightArm, rightShoulderRot);
             this.setRotation(MMDModelBones.LeftArm, leftShoulderRot);
             this.setRotation(MMDModelBones.RightElbow, rightElbowRot);
+            //left
             this.setRotation(MMDModelBones.LeftElbow, leftElbowRot);
             this.setRotation(MMDModelBones.RightWrist, rightWristRot);
             this.setRotation(MMDModelBones.LeftWrist, leftWristRot);
         }
-        if (LegsCalculate) {
+        if (settings.LegsCalculate) {
             this.setRotation(MMDModelBones.LeftHip, lefthipRotation);
             this.setRotation(MMDModelBones.LeftAnkle, leftfootRotation, Space.WORLD);
             this.setRotation(MMDModelBones.RightHip, righthipRotation);
             this.setRotation(MMDModelBones.RightAnkle, rightfootRotation, Space.WORLD);
+            this.moveFoot("left", mainBody);
+            this.moveFoot("right", mainBody);
         }
-        if (HeadCalculate) {
+        if (settings.HeadCalculate) {
             this.setRotation(MMDModelBones.Head, HeadRotation);
         }
-        this.rotateFingers(leftWorldFingers, "left");
-        this.rotateFingers(rightWorldFingers, "right")
-        if (FacialAndEyesCalculate) {
+        if (settings.FacialAndEyesCalculate) {
             this.updateFacialExpressions(faceLandmarks);
             this.updateEyeMovement(faceLandmarks);
         }
+        this.rotateFingers(leftWorldFingers, "left");
+        this.rotateFingers(rightWorldFingers, "right")
     }
     moveBody(bodyLand: NormalizedLandmark[]): void {
         const leftShoulder = this.getKeyPoint(bodyLand, "left_shoulder", "pose");
@@ -177,12 +186,12 @@ export class MotionModel {
         const leftAnkle = this.getKeyPoint(bodyLand, "left_ankle", "pose");
         const rightAnkle = this.getKeyPoint(bodyLand, "right_ankle", "pose");
         const baseY = bodyCenter.y * 10;
-        
+
         const avgFootY = (leftAnkle!.y + rightAnkle!.y);
-        
+
         const mmdPosition = new Vector3(
             bodyCenter.z * 10,
-            (baseY + avgFootY)+1,
+            (baseY + avgFootY) + 1,
             bodyCenter.z * 10
         );
         rootBone.position = Vector3.Lerp(
@@ -190,8 +199,7 @@ export class MotionModel {
             mmdPosition,
             CONFIG.LERP_FACTOR
         );
-        this.moveFoot("left", bodyLand);
-        this.moveFoot("right", bodyLand);
+
     }
 
     updateFacialExpressions(faceLandmarks: NormalizedLandmark[]): void {
@@ -292,7 +300,6 @@ export class MotionModel {
                 const scaleZ = 5;
                 return point ? new Vector3(point.x * scaleX, point.y * scaleY, point.z * scaleZ) : null
             case "hand":
-
                 var point = landMark[handKeypoints[name]]
                 return point ? new Vector3(point.x, point.y, point.z) : null
             case "pose":
@@ -319,6 +326,7 @@ export class MotionModel {
 
         return rotationQuaternion;
     }
+
     rotateFingers(hand: NormalizedLandmark[] | null, side: "left" | "right"): void {
         if (!hand || hand.length === 0) return;
 
@@ -348,9 +356,9 @@ export class MotionModel {
 
                         let defaultVector: Vector3;
                         if (fingerName === "親指") {
-                            defaultVector = new Vector3(side !== "left" ? -1 : 1, 1, 0); // Thumb default direction
+                            defaultVector = new Vector3(side === "left" ? -1 : 1, 1, 0); // Thumb default direction
                         } else {
-                            defaultVector = new Vector3(side !== "left" ? -1 : 1, -1, 0); // Other fingers default direction
+                            defaultVector = new Vector3(side === "left" ? -1 : 1, -1, 0); // Other fingers default direction
                         }
 
                         rotationAngle = Vector3.GetAngleBetweenVectors(segmentVector, defaultVector, new Vector3(1, 0, 0));
@@ -638,10 +646,11 @@ class HolisticParser {
     mainBody: NormalizedLandmark[]
     leftWorldFingers: NormalizedLandmark[]
     rightWorldFingers: NormalizedLandmark[]
-
+    poseLandmarks: NormalizedLandmark[]
     faceLandmarks: NormalizedLandmark[]
     constructor(holisticResult: HolisticLandmarkerResult) {
         this.mainBody = holisticResult.poseWorldLandmarks[0];
+        this.poseLandmarks = holisticResult.poseLandmarks[0];
         this.leftWorldFingers = holisticResult.leftHandWorldLandmarks[0];
         this.rightWorldFingers = holisticResult.rightHandWorldLandmarks[0];
         this.faceLandmarks = holisticResult.faceLandmarks[0];

@@ -5,7 +5,8 @@ import { useEffect, useRef, useState, MouseEvent, useMemo } from 'react'
 //babylon-mmd & babylonjs
 
 
-import { AbstractMesh, ArcRotateCamera, AssetContainer, Color3, DirectionalLight, Engine, HemisphericLight, loadAssetContainerAsync, Mesh, MeshBuilder, Scene, ShadowGenerator, Vector3 } from '@babylonjs/core'
+import { AbstractMesh, ArcRotateCamera, AssetContainer, Color3, DirectionalLight, Engine, FlyCamera, FreeCamera, HemisphericLight, loadAssetContainerAsync, Mesh, MeshBuilder, Scene, ShadowGenerator, Vector3 } from '@babylonjs/core'
+import { GLTF2Export } from "babylonjs-serializers"
 import { getMmdWasmInstance, MmdStandardMaterialBuilder, MmdWasmInstanceTypeMPD, MmdWasmModel, MmdWasmPhysics, MmdWasmRuntime, SdefInjector } from 'babylon-mmd'
 import { AkiraButton } from '../components/AkiraButton'
 import { ArrowsAltOutlined, EyeInvisibleOutlined, EyeOutlined, MutedOutlined, PauseOutlined, PlayCircleOutlined, SettingFilled, SoundOutlined, VideoCameraFilled } from '@ant-design/icons'
@@ -70,13 +71,13 @@ export default function ScenePage() {
         HeadCalculate: true,
         FacialAndEyesCalculate: true
     })
+    const [handleReq,SetHandleReq]= useState(0)
     const [MotionCap, SetMotionCap] = useState(new MotionModel())
-    const GestureRef = useRef<GestureRecognizer>(null)
     const HolisticRef = useRef<HolisticLandmarker>(null)
     const [OnHolisticLoaded, SetHolisticLoaded] = useState(false)
     const loadHolistic = async () => {
         return FilesetResolver.forVisionTasks(
-            "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.15/wasm"
+            "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
         ).then(async vision => {
             const holisticLandmarker = await HolisticLandmarker.createFromOptions(vision, {
                 baseOptions: {
@@ -84,34 +85,22 @@ export default function ScenePage() {
                         "https://storage.googleapis.com/mediapipe-models/holistic_landmarker/holistic_landmarker/float16/latest/holistic_landmarker.task",
                     delegate: "GPU",
                 },
-                minFaceDetectionConfidence: 0.8,
-                minFaceSuppressionThreshold: 0.2,
-                minFacePresenceConfidence: 0.7,
-                minPoseDetectionConfidence: 0.6,
-                minPoseSuppressionThreshold: 0.2,
-                minHandLandmarksConfidence: 0.7,
                 runningMode: "VIDEO",
             })
-            // const gestureRecognizer = await GestureRecognizer.createFromOptions(vision, {
-            //     baseOptions: {
-            //         modelAssetPath: "https://storage.googleapis.com/mediapipe-tasks/gesture_recognizer/gesture_recognizer.task"
-            //     },
-            //     numHands: 2
-            // });
-            //GestureRef.current = gestureRecognizer;
+
             HolisticRef.current = holisticLandmarker;
         })
     }
     const runAnimation = async () => {
 
         if (HolisticRef.current && VideoCurrentRef.current && !VideoCurrentRef.current.paused && VideoCurrentRef.current.readyState >= 2) {
-            HolisticRef.current!.detectForVideo(VideoCurrentRef.current, performance.now(), (res) => {
+            var timestamp = performance.now()
+            HolisticRef.current!.detectForVideo(VideoCurrentRef.current, timestamp, (res) => {
                 if (VideoState.SkeletonPlaced) {
                     SkeletonShow.onShowSkeleton(SkeletonCanvasRef, res)
                 }
                 if (MMDStates.MMDRuntime && MMDStates.MMDModel) {
-
-                    MotionCap.motionCalculate(res,SettingsMotionCapture)
+                    MotionCap.motionCalculate(res, SettingsMotionCapture)
                 }
             });
         }
@@ -197,14 +186,6 @@ export default function ScenePage() {
             const mainMesh = res.meshes[0];
             res.addAllToScene();
 
-            // // Configure shadows
-            // if (mainMesh.metadata?.meshes) {
-            //     for (const mesh of mainMesh.metadata.meshes) {
-            //         mesh.receiveShadows = true;
-            //     }
-            // }
-
-            // shadowGenerator?.addShadowCaster(mainMesh);
             return [mainMesh, res] as [AbstractMesh, AssetContainer];
         }).finally(() => {
             // Cleanup blob URL after loading
@@ -239,8 +220,14 @@ export default function ScenePage() {
             engine.loadingUIBackgroundColor = "var(--bg-color)"
             mmdscene.ambientColor = new Color3(0, 0, 0);
             //const camera = new MmdCamera("mmdCamera", new Vector3(0, 10, 0), mmdscene);
-            const camera = new ArcRotateCamera("Camera", -1.6, 1, 50, Vector3.Zero(), mmdscene);
-            camera.attachControl(convRef.current, true);
+            var camera = new FlyCamera("camera", new Vector3(0, 15, -35), mmdscene);
+            camera.rollCorrect = 10;
+            camera.bankedTurn = true;
+            camera.bankedTurnLimit = Math.PI / 2;
+            camera.bankedTurnMultiplier = 1;
+            camera.attachControl(true);
+            // const camera = new ArcRotateCamera("Camera", -1.6, 1, 50, Vector3.Zero(), mmdscene);
+            // camera.attachControl(convRef.current, true);
             const mmdRuntime = new MmdWasmRuntime(mmdWasmInstance, mmdscene, new MmdWasmPhysics(mmdscene));
             mmdRuntime.register(mmdscene)
 
@@ -287,7 +274,6 @@ export default function ScenePage() {
     }, [VideoState])
     //rerender model with shadow
     useEffect(() => {
-
         if (MMDStates.MMDEngine && MMDStates.MMDScene && MMDStates.MMDRuntime && MMDStates.MMDShadowManager && scene && scene.modelPathOrLink) {
             loadModel(MMDStates.MMDEngine, MMDStates.MMDScene, scene!.modelPathOrLink, MMDStates.MMDRuntime, MMDStates.MMDShadowManager).then((res) => {
                 SetMMDStates({ ...MMDStates, MMDModel: MMDStates.MMDRuntime?.createMmdModel(res.Model), MMDAssetContainer: res.AssetContainer });
@@ -296,10 +282,8 @@ export default function ScenePage() {
         }
         console.log("Changed to " + scene?.modelPathOrLink)
     }, [scene?.modelPathOrLink])
-
     //rerender scene
     useEffect(() => {
-
         if (MMDStates.MMDEngine && MMDStates.MMDScene) {
             MMDStates.MMDEngine.hideLoadingUI();
             console.log("Loaded");
@@ -308,8 +292,6 @@ export default function ScenePage() {
                 MMDStates.MMDScene?.render()
 
             });
-
-
         }
     }, [MMDStates.MMDEngine, MMDStates.MMDScene])
     useEffect(() => {
@@ -330,24 +312,11 @@ export default function ScenePage() {
             <AkiraButton className="size-[45px]" onClick={() => OpenDrawer("VideoDrawerOpened", true)}>
                 <VideoCameraFilled />
             </AkiraButton>
-            <AkiraButton className="size-[45px]" onClick={() => OpenDrawer("SettingsDrawerOpened", true)}>
+            <AkiraButton disabled className="size-[45px]" onClick={() => OpenDrawer("SettingsDrawerOpened", true)}>
                 <SettingFilled />
             </AkiraButton>
         </div>
         <AkiraDrawer removeBlurButton closable title="Settings" open={DrawerStates.SettingsDrawerOpened} onClose={() => { OpenDrawer("SettingsDrawerOpened", false) }} >
-            {/* <p className='text-ForegroundColor text-lg text-center font-bold'>Finger logic</p> */}
-            {/* <div className='flex justify-around mb-3'>
-
-                <div className='flex flex-col text-base gap-y-2 text-ForegroundColor'>
-                    <p>Finger rotation calculation</p>
-                    <p>Finger gestures [Experimental]</p>
-                </div>
-                <div className='flex gap-y-2 flex-col justify-center items-center'>
-                    <AkiraRadioButton />
-                    <AkiraRadioButton />
-
-                </div>
-            </div> */}
             <p className='text-ForegroundColor text-lg text-center font-bold'>Motion capture settings</p>
             <div className='flex justify-around mb-3'>
 
@@ -366,6 +335,8 @@ export default function ScenePage() {
                             SetSettingsMotionCapture((prevState) => {
                                 var newState = { ...prevState }
                                 newState[el as keyof typeof SettingsMotionCapture] = !prevState[el as keyof typeof SettingsMotionCapture]
+                                console.log(SettingsMotionCapture)
+
                                 return newState;
                             })
                         }}
@@ -402,6 +373,7 @@ export default function ScenePage() {
                 <button id="SoundEnabled" className="p-2 size-[45px] font-bold cursor-pointer  hover:bg-BackgroundHoverButton duration-700 flex justify-center items-center aspect-square rounded bg-BackgroundButton text-white" onClick={onClicked}>
                     {!VideoState.SoundEnabled ? <SoundOutlined /> : <MutedOutlined />}
                 </button>
+
             </div>
             <div className='mt-2 flex flex-col gap-y-2'>
                 <AkiraButton className="w-full" onClick={() => {
@@ -412,6 +384,13 @@ export default function ScenePage() {
                 </AkiraButton>
                 <AkiraButton disabled className="w-full" onClick={() => { }}>
                     Export to vmd
+                </AkiraButton>
+                <AkiraButton disabled className="w-full" onClick={() => {
+                    GLTF2Export.GLBAsync(MMDStates.MMDScene, "fileName").then((glb) => {
+                        glb.downloadFiles();
+                    });
+                }}>
+                    Export to glTF
                 </AkiraButton>
             </div>
         </AkiraDrawer>
