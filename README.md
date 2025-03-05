@@ -28,7 +28,7 @@ Create professional animations in minutes, not hours. Perfect for both beginners
 | Feature | Status |
 |---------|--------|
 | Dark/Purple/White Themes | ✅ Implemented |
-| Bone Structure Visualizer | 🚧 In Development |
+| Bone Structure Visualizer | ✅ Implemented |
 
 ### 🌐 International Support
 - **Current**: English (Full Support)
@@ -73,13 +73,6 @@ npm run dev
 - Use Chrome/Edge for best WebGL performance
 - Recommended resolution: 1280x720 for real-time preview
 - Close background apps during capture sessions
-
-## 🛠️ Development Roadmap
-
-### Next Release (v0.7.2)
-- [ ] Basic VMD export support
-- [ ] Japanese localization
-
 ### Future Plans
 - 📱 Progressive Web App (PWA) support
 - 🖥️ Desktop app (Electron-based)
