@@ -1,11 +1,11 @@
 "use client"
 import { useSearchParams } from 'next/navigation'
 import { useScenes, ScenesType } from '../hookes/useScenes'
-import { useEffect, useRef, useState, MouseEvent, useMemo } from 'react'
+import { useEffect, useRef, useState, MouseEvent, useMemo, useCallback } from 'react'
 //babylon-mmd & babylonjs
 
 
-import { AbstractMesh, ArcRotateCamera, AssetContainer, Color3, DirectionalLight, Engine, FlyCamera, FreeCamera, HemisphericLight, loadAssetContainerAsync, Mesh, MeshBuilder, Scene, ShadowGenerator, Vector3 } from '@babylonjs/core'
+import { AbstractMesh, ArcRotateCamera, AssetContainer, Color3, DirectionalLight, Engine, FlyCamera, FreeCamera, HemisphericLight, loadAssetContainerAsync, Mesh, MeshBuilder, Scene, SceneLoader, ShadowGenerator, Vector3 } from '@babylonjs/core'
 import { GLTF2Export } from "babylonjs-serializers"
 import { getMmdWasmInstance, MmdStandardMaterialBuilder, MmdWasmInstanceTypeMPD, MmdWasmModel, MmdWasmPhysics, MmdWasmRuntime, SdefInjector } from 'babylon-mmd'
 import { AkiraButton } from '../components/AkiraButton'
@@ -14,10 +14,11 @@ import { ArrowsAltOutlined, EyeInvisibleOutlined, EyeOutlined, MutedOutlined, Pa
 import { AkiraDrawer } from "../components/AkiraDrawer";
 import { FilesetResolver, GestureRecognizer, HolisticLandmarker } from "@mediapipe/tasks-vision";
 import { SkeletonShow } from "../logic/Skeleton";
-import { MotionModel, SettingsType } from '../logic/MotionModel'
+import { MotionModel, MotionSettingsType, SETTINGS_CONFIGType } from '../logic/MotionModel'
 import AkiraRadioButton from '../components/AkiraRadioButton'
 import { IsUUID } from '../logic/extentions'
 import { useSavedModel } from '../hookes/useSavedModel'
+import { InputNumber } from 'antd'
 
 
 export default function ScenePage() {
@@ -64,14 +65,6 @@ export default function ScenePage() {
         SetVideoState(newState)
     }
     //mediapipe with drawing
-    const [SettingsMotionCapture, SetSettingsMotionCapture] = useState<SettingsType>({
-        BodyCalculate: true,
-        LegsCalculate: true,
-        ArmsCalculate: true,
-        HeadCalculate: true,
-        FacialAndEyesCalculate: true
-    })
-    const [handleReq,SetHandleReq]= useState(0)
     const [MotionCap, SetMotionCap] = useState(new MotionModel())
     const HolisticRef = useRef<HolisticLandmarker>(null)
     const [OnHolisticLoaded, SetHolisticLoaded] = useState(false)
@@ -100,7 +93,7 @@ export default function ScenePage() {
                     SkeletonShow.onShowSkeleton(SkeletonCanvasRef, res)
                 }
                 if (MMDStates.MMDRuntime && MMDStates.MMDModel) {
-                    MotionCap.motionCalculate(res, SettingsMotionCapture)
+                    MotionCap.motionCalculate(res)
                 }
             });
         }
@@ -116,6 +109,16 @@ export default function ScenePage() {
         }
     }, [HolisticRef.current])
     //babylon-mmd
+    const [MotionCaptureSettings, SetMotionCaptureSettings] = useState<MotionSettingsType>({
+        BodyCalculate: true,
+        LegsCalculate: true,
+        ArmsCalculate: true,
+        HeadCalculate: true,
+        FacialAndEyesCalculate: true
+    })
+    const [SETTINGS_CONFIG, SetSETTINGS_CONFIG] = useState<SETTINGS_CONFIGType>({
+        POSE_Y_SCALE: 0
+    })
     const [MMDStates, SetMMDStates] = useState<{
         MMDScene?: Scene,
         MMDRuntime?: MmdWasmRuntime,
@@ -285,7 +288,6 @@ export default function ScenePage() {
     //rerender scene
     useEffect(() => {
         if (MMDStates.MMDEngine && MMDStates.MMDScene) {
-            MMDStates.MMDEngine.hideLoadingUI();
             console.log("Loaded");
             MMDStates.MMDEngine?.runRenderLoop(() => {
                 MMDStates.MMDEngine!.resize();
@@ -294,9 +296,17 @@ export default function ScenePage() {
             });
         }
     }, [MMDStates.MMDEngine, MMDStates.MMDScene])
+
     useEffect(() => {
         if (MMDStates.MMDModel && MMDStates.MMDEngine) MotionCap.init(MMDStates.MMDModel, MMDStates.MMDEngine);
     }, [MMDStates.MMDModel])
+    //settings
+    useEffect(() => {
+        MotionCap.setSettings(MotionCaptureSettings)
+    }, [MotionCaptureSettings])
+    useEffect(() => {
+        MotionCap.SETTINGS_CONFIG = SETTINGS_CONFIG;
+    }, [SETTINGS_CONFIG])
     //
     useEffect(() => {
         setScene(scenes.find((el) => el.id == sceneId))
@@ -312,7 +322,7 @@ export default function ScenePage() {
             <AkiraButton className="size-[45px]" onClick={() => OpenDrawer("VideoDrawerOpened", true)}>
                 <VideoCameraFilled />
             </AkiraButton>
-            <AkiraButton disabled className="size-[45px]" onClick={() => OpenDrawer("SettingsDrawerOpened", true)}>
+            <AkiraButton className="size-[45px]" onClick={() => OpenDrawer("SettingsDrawerOpened", true)}>
                 <SettingFilled />
             </AkiraButton>
         </div>
@@ -328,19 +338,37 @@ export default function ScenePage() {
                     <p>Calculate facial and eyes</p>
                 </div>
                 <div className='flex gap-y-3 flex-col justify-center items-center'>
-                    {Object.keys(SettingsMotionCapture).map((el, ind) => <AkiraRadioButton
+                    {Object.keys(MotionCaptureSettings).map((el, ind) => <AkiraRadioButton
                         key={ind}
-                        checked={SettingsMotionCapture[el as keyof typeof SettingsMotionCapture]}
+                        checked={MotionCaptureSettings[el as keyof MotionSettingsType]}
                         onChange={() => {
-                            SetSettingsMotionCapture((prevState) => {
-                                var newState = { ...prevState }
-                                newState[el as keyof typeof SettingsMotionCapture] = !prevState[el as keyof typeof SettingsMotionCapture]
-                                console.log(SettingsMotionCapture)
 
+                            SetMotionCaptureSettings((prevState) => {
+                                var prevStates = { ...prevState };
+                                var elem = el as keyof MotionSettingsType;
+                                var newState = prevStates;
+                                newState[elem] = !prevStates[elem]
                                 return newState;
                             })
                         }}
                     />)}
+                </div>
+            </div>
+            <p className='text-ForegroundColor text-lg text-center font-bold'>Variables</p>
+            <div className='flex justify-around mb-3'>
+
+                <div className='flex flex-col text-base gap-y-3 text-ForegroundColor'>
+                    <p>Pose scale</p>
+                </div>
+                <div className='flex gap-y-3 flex-col justify-center items-center'>
+                    <InputNumber type="number" controls onChange={(value) => {
+                        if (value) {
+                            SetSETTINGS_CONFIG({
+                                ...SETTINGS_CONFIG,
+                                POSE_Y_SCALE: value
+                            })
+                        }
+                    }} value={SETTINGS_CONFIG.POSE_Y_SCALE} />
                 </div>
             </div>
         </AkiraDrawer>
@@ -380,15 +408,20 @@ export default function ScenePage() {
                     if (VideoCurrentRef.current && VideoCurrentRef.current.src)
                         MotionCap.startRecordMp4(VideoCurrentRef.current)
                 }}>
-                    {MotionCap._Recorder && MotionCap._Recorder.isRecording ? "Stop Record video" : "Record video"}
+                    Record video
                 </AkiraButton>
                 <AkiraButton disabled className="w-full" onClick={() => { }}>
                     Export to vmd
                 </AkiraButton>
-                <AkiraButton disabled className="w-full" onClick={() => {
-                    GLTF2Export.GLBAsync(MMDStates.MMDScene, "fileName").then((glb) => {
-                        glb.downloadFiles();
-                    });
+                <AkiraButton className="w-full" onClick={async () => {
+                    if (MMDStates.MMDScene && MMDStates.MMDModel) {
+                        GLTF2Export.GLTFAsync(MMDStates.MMDScene, "fileName",{
+                            removeNoopRootNodes: false,
+                        }).then((glb) => {
+                            glb.downloadFiles();
+                        });
+                    }
+
                 }}>
                     Export to glTF
                 </AkiraButton>

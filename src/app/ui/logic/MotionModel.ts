@@ -1,12 +1,13 @@
 import { Engine, Matrix, Quaternion, Space, Vector3, VideoRecorder } from "@babylonjs/core";
-import { GestureRecognizerResult, HolisticLandmarkerResult, NormalizedLandmark } from "@mediapipe/tasks-vision";
-import { MmdModel, MmdWasmModel } from "babylon-mmd";
+import { HolisticLandmarkerResult, NormalizedLandmark } from "@mediapipe/tasks-vision";
+import { MmdWasmModel } from "babylon-mmd";
 import { IMmdRuntimeLinkedBone } from "babylon-mmd/esm/Runtime/IMmdRuntimeLinkedBone";
 import { faceKeypoints, handKeypoints, poseKeypoints } from "./MotionTypes";
-import { OneEuroFilter } from '1eurofilter'
+import { KalmanVectorFilter, OneEuroVectorFilter } from "./Filters";
+
 export type BoneType = "hand" | "pose" | "face"
 // Константы для имен костей
-enum MMDModelBones {
+export enum MMDModelBones {
     UpperBody = "上半身",
     LowerBody = "下半身",
     LeftArm = "左腕",
@@ -19,6 +20,8 @@ enum MMDModelBones {
     RightHip = "右足",
     LeftAnkle = "左足首",
     RightAnkle = "右足首",
+    RightKnee = "右ひざ",
+    LeftKnee = "左ひざ",
     LeftFootIK = "左足ＩＫ",
     RightFootIK = "右足ＩＫ",
     Neck = "首",
@@ -29,34 +32,16 @@ enum MMDModelBones {
     Eyebrows = "眉",
     Mouth = "口"
 }
-const CONFIG = {
-    POSE_SCALE: 15,
 
-    POSE_HISTORY_LENGTH: 5,
-    MIN_MOVEMENT_THRESHOLD: 0.01,
-    HAND_SCALE: 0.7,
-    LERP_FACTOR: 0.3,
-    //FINGER_BEND_SCALE: 0.3,
-    HEAD_ROTATION_SCALE: 0.7,
-    EYE_MOVEMENT_SCALE: 0.05,
-    MOUTH_OPEN_SCALE: 3.0,
-    BLINK_THRESHOLD: 0.02,
-    EYEBROW_RAISE_SCALE: 4.0,
-    MOUTH_CORNER_SCALE: 8.0,
-    BROW_FURROW_SCALE: 5.0,
-    //
-
-    THUMB_TWIST_SCALE: 0.35,
-    FINGER_LERP_SPEED: 0.28,
-    MIN_FINGER_ANGLE: 0.01,
-    MAX_FINGER_ANGLE: Math.PI / 2
-};
-export type SettingsType = {
+export type MotionSettingsType = {
     BodyCalculate: boolean,
     LegsCalculate: boolean,
     ArmsCalculate: boolean,
     HeadCalculate: boolean,
     FacialAndEyesCalculate: boolean
+}
+export type SETTINGS_CONFIGType = {
+    POSE_Y_SCALE: number
 }
 //abstract class for support all extention models [on dev]
 export abstract class MotionAbstractModel<TBones, TModel = any> {
@@ -70,7 +55,27 @@ export class MotionModel {
     public _Recorder?: VideoRecorder
     public _Model?: MmdWasmModel
     public _bones?: IMmdRuntimeLinkedBone[] = []
-    constructor(private lerpFactor: number = CONFIG.LERP_FACTOR) { }
+    public CONFIG = {
+        POSE_SCALE: 15,
+        LERP_FACTOR: 0.3,
+        EYE_MOVEMENT_SCALE: 0.05,
+        POSE_SETTINGS_SCALE: 1.5
+    };
+    public SETTINGS_CONFIG = {
+        POSE_Y_SCALE: 0
+    }
+    public MotionSettings: MotionSettingsType = {
+        BodyCalculate: true,
+        LegsCalculate: true,
+        ArmsCalculate: true,
+        HeadCalculate: true,
+        FacialAndEyesCalculate: true
+    }
+    public setSettings(setting: MotionSettingsType) {
+        this.MotionSettings = setting;
+    }
+    constructor(private lerpFactor: number = 0.3) { }
+
     searchBone(name: string) {
         return this._bones?.find((el) => {
             return el.name == name
@@ -82,17 +87,11 @@ export class MotionModel {
         this._bones = this._Model.skeleton.bones;
     }
 
-    motionCalculate(holisticResult: HolisticLandmarkerResult, settings: SettingsType, gestureRes?: GestureRecognizerResult) {
+    motionCalculate(holisticResult: HolisticLandmarkerResult) {
         if (!this._Model) return;
-        var { mainBody, leftWorldFingers, rightWorldFingers, faceLandmarks } = new HolisticParser(holisticResult);
-        console.log(settings);
-        for (let index = 0; index < mainBody.length; index++) {
-            const element = mainBody[index];
-            mainBody[index].x = new OneEuroFilter(30, 1, 1, 2).filter(element.x, performance.now())
-            mainBody[index].y = new OneEuroFilter(30, 1, 1, 2).filter(element.y, performance.now())
-            mainBody[index].z = new OneEuroFilter(30, 1, 1, 2).filter(element.z, performance.now())
-
-        }
+        var { mainBody, poseLandmarks, leftWorldFingers, rightWorldFingers, faceLandmarks } = new HolisticParser(holisticResult);
+        // console.log(`left hip: ${poseLandmarks[23].x} right hip: ${poseLandmarks[24].x}`)
+        // console.log(`left hip 3: ${mainBody[23].x} right hip 3: ${mainBody[24].x}`)
         var UpperBodyRotation = this.calculateUpperBodyRotation(mainBody);
         var LowerBodyRotation = this.calculateLowerBodyRotation(mainBody);
         const HeadRotation = this.calculateHeadRotation(mainBody, UpperBodyRotation);
@@ -138,13 +137,13 @@ export class MotionModel {
             "right_knee",
             "right_ankle",
             LowerBodyRotation);
-        if (settings.BodyCalculate) {
+        if (this.MotionSettings.BodyCalculate) {
             this.moveBody(mainBody);
             this.setRotation(MMDModelBones.LowerBody, LowerBodyRotation);
             this.setRotation(MMDModelBones.UpperBody, UpperBodyRotation);
         }
 
-        if (settings.ArmsCalculate) {
+        if (this.MotionSettings.ArmsCalculate) {
             //right
             this.setRotation(MMDModelBones.RightArm, rightShoulderRot);
             this.setRotation(MMDModelBones.LeftArm, leftShoulderRot);
@@ -154,7 +153,7 @@ export class MotionModel {
             this.setRotation(MMDModelBones.RightWrist, rightWristRot);
             this.setRotation(MMDModelBones.LeftWrist, leftWristRot);
         }
-        if (settings.LegsCalculate) {
+        if (this.MotionSettings.LegsCalculate) {
             this.setRotation(MMDModelBones.LeftHip, lefthipRotation);
             this.setRotation(MMDModelBones.LeftAnkle, leftfootRotation, Space.WORLD);
             this.setRotation(MMDModelBones.RightHip, righthipRotation);
@@ -162,13 +161,14 @@ export class MotionModel {
             this.moveFoot("left", mainBody);
             this.moveFoot("right", mainBody);
         }
-        if (settings.HeadCalculate) {
+        if (this.MotionSettings.HeadCalculate) {
             this.setRotation(MMDModelBones.Head, HeadRotation);
         }
-        if (settings.FacialAndEyesCalculate) {
+        if (this.MotionSettings.FacialAndEyesCalculate) {
             this.updateFacialExpressions(faceLandmarks);
             this.updateEyeMovement(faceLandmarks);
         }
+
         this.rotateFingers(leftWorldFingers, "left");
         this.rotateFingers(rightWorldFingers, "right")
     }
@@ -185,19 +185,18 @@ export class MotionModel {
         const bodyCenter = Vector3.Center(shoulderCenter, hipCenter);
         const leftAnkle = this.getKeyPoint(bodyLand, "left_ankle", "pose");
         const rightAnkle = this.getKeyPoint(bodyLand, "right_ankle", "pose");
-        const baseY = bodyCenter.y * 10;
-
+        const baseY = bodyCenter.y * this.CONFIG.POSE_SCALE;
         const avgFootY = (leftAnkle!.y + rightAnkle!.y);
 
         const mmdPosition = new Vector3(
-            bodyCenter.z * 10,
-            (baseY + avgFootY) + 1,
-            bodyCenter.z * 10
+            bodyCenter.x * this.CONFIG.POSE_SCALE, // Fixed X-axis scaling
+            (baseY + avgFootY) + 1.5 + this.SETTINGS_CONFIG.POSE_Y_SCALE,
+            bodyCenter.z * this.CONFIG.POSE_SCALE
         );
         rootBone.position = Vector3.Lerp(
             rootBone.position,
             mmdPosition,
-            CONFIG.LERP_FACTOR
+            this.CONFIG.LERP_FACTOR
         );
 
     }
@@ -309,23 +308,8 @@ export class MotionModel {
                 return null
         }
     }
-    getBoneRotation(p1: Vector3, p2: Vector3, p3: Vector3): Quaternion {
-        // Создаем векторы между точками
-        const v1 = p2.subtract(p1).normalize();
-        const v2 = p3.subtract(p2).normalize();
-        // Рассчитываем ось вращения
-        const rotationAxis = Vector3.Cross(v1, v2).normalize();
-
-        // Рассчитываем угол между векторами
-        const cosTheta = Vector3.Dot(v1, v2);
-        const angle = Math.acos(Math.min(Math.max(cosTheta, -1), 1));
-
-        // Создаем кватернион поворота
-        const rotationQuaternion = Quaternion.RotationAxis(rotationAxis, angle);
 
 
-        return rotationQuaternion;
-    }
 
     rotateFingers(hand: NormalizedLandmark[] | null, side: "left" | "right"): void {
         if (!hand || hand.length === 0) return;
@@ -485,8 +469,11 @@ export class MotionModel {
         const hip = this.getKeyPoint(mainBody, hipLandmark, "pose");
         const knee = this.getKeyPoint(mainBody, kneeLandmark, "pose");
         const ankle = this.getKeyPoint(mainBody, ankleLandmark, "pose");
-        const hipRotation = !hip || !knee ? new Quaternion() : this.calculateHipRotation(lowerBodyRot, hip, knee);
-        const footRotation = !hip || !ankle ? new Quaternion() : this.calculateFootRotation(hip, ankle, hipRotation);
+        const filteredHip = new OneEuroVectorFilter(0, Vector3.Zero(), Vector3.Zero(), 0.5, 0.1).next(Date.now(), hip!);
+        const filteredKnee = new OneEuroVectorFilter(0, Vector3.Zero(), Vector3.Zero(), 0.5, 0.1).next(Date.now(), knee!);
+        const filteredAnkle = new OneEuroVectorFilter(0, Vector3.Zero(), Vector3.Zero(), 0.5, 0.1).next(Date.now(), ankle!);
+        const hipRotation = !hip || !knee ? Quaternion.Identity() : this.calculateHipRotation(lowerBodyRot, filteredHip, filteredKnee);
+        const footRotation = !hip || !ankle ? Quaternion.Identity() : this.calculateFootRotation(filteredHip, filteredAnkle, hipRotation);
         return [hipRotation, footRotation];
     }
     private calculateHipRotation(
@@ -525,20 +512,25 @@ export class MotionModel {
         const elbow = this.getKeyPoint(mainBody, elbowLandmark, "pose");
         const wrist = this.getKeyPoint(mainBody, wristLandmark, "pose");
         const fingerhand = this.getKeyPoint(handKeypoints, "pinky_mcp", "hand");
+        var armFilter = new KalmanVectorFilter(0.1, 3);
+
+        const filteredShoulder = armFilter.next(Date.now(), shoulder!);
+        const filteredElbow = armFilter.next(Date.now(), elbow!);
+        const filteredWrist = armFilter.next(Date.now(), wrist!);
         const shoulderRot = !shoulder || !elbow ? new Quaternion() : this.calculateShoulderRotation(
-            shoulder,
-            elbow,
+            filteredShoulder,
+            filteredElbow,
             bodyRot.upperBodyRot,
             isRight
         );
         const elbowRot = !elbow || !wrist ? new Quaternion() : this.calculateElbowRotation(
             bodyRot.upperBodyRot,
-            elbow,
-            wrist,
+            filteredElbow,
+            filteredWrist,
             isRight
         );
         const wristRot = !wrist || !fingerhand ? new Quaternion() : this.calculateWristRotation(
-            wrist,
+            filteredWrist,
             fingerhand,
             bodyRot.lowerBodyRot,
             isRight
@@ -566,9 +558,10 @@ export class MotionModel {
 
     }
     private calculateLowerBodyRotation(mainBody: NormalizedLandmark[]): Quaternion {
-        const leftHip = this.getKeyPoint(mainBody, "left_hip", "pose");
-        const rightHip = this.getKeyPoint(mainBody, "right_hip", "pose");
-
+        const leftVec = this.getKeyPoint(mainBody, "left_hip", "pose");
+        const rightVec = this.getKeyPoint(mainBody, "right_hip", "pose");
+        const leftHip = new OneEuroVectorFilter(0, Vector3.Zero(), Vector3.Zero(), 0.5, 0.1).next(Date.now(), leftVec!)
+        const rightHip = new OneEuroVectorFilter(0, Vector3.Zero(), Vector3.Zero(), 0.5, 0.1).next(Date.now(), rightVec!)
         if (leftHip && rightHip) {
             const hipDir = leftHip.subtract(rightHip).normalize()
             hipDir.y *= -1
@@ -591,8 +584,8 @@ export class MotionModel {
                 const direction = lookAt.subtract(pupilCenter).normalize();
 
                 const rotation = Quaternion.RotationYawPitchRoll(
-                    direction.y * CONFIG.EYE_MOVEMENT_SCALE,
-                    direction.x * CONFIG.EYE_MOVEMENT_SCALE * (side === "left" ? -1 : 1),
+                    direction.y * this.CONFIG.EYE_MOVEMENT_SCALE,
+                    direction.x * this.CONFIG.EYE_MOVEMENT_SCALE * (side === "left" ? -1 : 1),
                     0
                 );
 
@@ -609,9 +602,11 @@ export class MotionModel {
     calculateUpperBodyRotation(mainBody: NormalizedLandmark[]): Quaternion {
         const leftShoulder = this.getKeyPoint(mainBody, "left_shoulder", "pose")
         const rightShoulder = this.getKeyPoint(mainBody, "right_shoulder", "pose")
+
         if (leftShoulder && rightShoulder) {
-            // Calculate spine direction
-            const spineDir = leftShoulder.subtract(rightShoulder).normalize()
+            const filteredLeft = new KalmanVectorFilter(0.1, 3).next(Date.now(), leftShoulder!);
+            const filteredRight = new KalmanVectorFilter(0.1, 3).next(Date.now(), rightShoulder!);
+            const spineDir = filteredLeft.subtract(filteredRight).normalize()
             spineDir.y *= -1
             const defaultDir = new Vector3(1, 0, 0)
 
@@ -619,7 +614,7 @@ export class MotionModel {
             const spineRotation = Quaternion.FromUnitVectorsToRef(defaultDir, spineDir, new Quaternion())
 
             // Calculate bend
-            const shoulderCenter = Vector3.Center(leftShoulder, rightShoulder)
+            const shoulderCenter = Vector3.Center(filteredLeft, filteredRight)
             const hipCenter = new Vector3(0, 0, 0)
             const bendDir = shoulderCenter.subtract(hipCenter).normalize()
             bendDir.y *= -1
@@ -632,7 +627,7 @@ export class MotionModel {
         }
         return new Quaternion()
     }
-    moveFoot(side: "right" | "left", bodyLand: NormalizedLandmark[], scale: number = 10, yOffset: number = 7) {
+    moveFoot(side: "right" | "left", bodyLand: NormalizedLandmark[], scale: number = this.CONFIG.POSE_SCALE, yOffset: number = 7) {
         const ankle = this.getKeyPoint(bodyLand, `${side}_ankle`, "pose")
         const bone = this.searchBone(`${side === "right" ? "右" : "左"}足ＩＫ`)
         if (ankle && bone) {
