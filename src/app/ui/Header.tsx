@@ -42,8 +42,8 @@ export default function HeaderLayout() {
             if (searchedScene) SetSelectedScene(searchedScene);
         }, 1000)
     }
+    
     return <ConfigProvider
-
         theme={{
             components: {
                 Layout: {
@@ -58,18 +58,16 @@ export default function HeaderLayout() {
                     colorBgElevated: MenuTheme.bg,
 
                 },
-
             }
         }}
     >
         <Sider collapsible collapsed={collapsed} className="z-[100] overflow-y-hidden" onCollapse={(value) => {
             setCollapsed(value);
-
         }}>
             {contextHolder}
             <div className={!collapsed ? "flex items-center px-1 h-10 w-full" : "flex justify-center items-center  my-2 h-10 w-full"}>
                 <p className={`text-center font-bold text-lg text-ForegroundColor`}>
-                    Akira v0.7.1b-1
+                    Akira v0.7.1a
                 </p>
 
                 {!collapsed && <button className="ml-auto text-2xl text-ForegroundColor" onClick={() => { setTheme(theme == "dark" ? "purple" : theme == "purple" ? "light" : "dark") }}>
@@ -156,6 +154,6 @@ export default function HeaderLayout() {
             </div>
 
         </AkiraModalDialog>
-        <SettingsModal  opened={SettingsOpened} SetOpened={() => SetSettingsOpened(!SettingsOpened)} />
+        <SettingsModal opened={SettingsOpened} SetOpened={() => SetSettingsOpened(!SettingsOpened)} />
     </ConfigProvider>
 }

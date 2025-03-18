@@ -240,7 +240,6 @@ export default function SettingsModal({ opened, SetOpened }: { opened: boolean, 
                                 if (sceneId) {
                                     changeSceneModel(sceneId,"Black.bpmx")
                                     RemoveModelPath(el);
-                                    window.location.reload();
                                 }
                             }
                             } />

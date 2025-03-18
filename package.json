@@ -1,7 +1,7 @@
 {
   "name": "akira",
   "description": "Motion capture",
-  "version": "0.7.1b-1",
+  "version": "0.7.2a",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -23,6 +23,7 @@
     "antd-style": "^3.7.1",
     "babylon-mmd": "^0.59.1",
     "babylonjs-serializers": "^7.51.2",
+    "encoding-japanese": "^2.2.0",
     "framer-motion": "^11.15.0",
     "idb-keyval": "^6.2.1",
     "kalidokit": "^1.1.5",
@@ -34,6 +35,7 @@
     "zustand": "^5.0.2"
   },
   "devDependencies": {
+    "@types/encoding-japanese": "^2.2.1",
     "@types/kalmanjs": "^1.1.0",
     "@types/node": "^20",
     "@types/react": "^19",
