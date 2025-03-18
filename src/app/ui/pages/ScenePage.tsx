@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, MouseEvent, useMemo, useCallback } from 'r
 //babylon-mmd & babylonjs
 
 
-import { AbstractMesh, ArcRotateCamera, AssetContainer, Color3, DirectionalLight, Engine, FlyCamera, FreeCamera, HemisphericLight, loadAssetContainerAsync, Mesh, MeshBuilder, Scene, SceneLoader, ShadowGenerator, Vector3 } from '@babylonjs/core'
+import { AbstractMesh, ArcRotateCamera, AssetContainer, Color3, DirectionalLight, Engine, FlyCamera, FreeCamera, HemisphericLight, loadAssetContainerAsync, Mesh, MeshBuilder, Quaternion, Scene, SceneLoader, ShadowGenerator, Vector3 } from '@babylonjs/core'
 import { GLTF2Export } from "babylonjs-serializers"
 import { getMmdWasmInstance, MmdStandardMaterialBuilder, MmdWasmInstanceTypeMPD, MmdWasmModel, MmdWasmPhysics, MmdWasmRuntime, SdefInjector } from 'babylon-mmd'
 import { AkiraButton } from '../components/AkiraButton'
@@ -14,11 +14,12 @@ import { ArrowsAltOutlined, EyeInvisibleOutlined, EyeOutlined, MutedOutlined, Pa
 import { AkiraDrawer } from "../components/AkiraDrawer";
 import { FilesetResolver, GestureRecognizer, HolisticLandmarker } from "@mediapipe/tasks-vision";
 import { SkeletonShow } from "../logic/Skeleton";
-import { MotionModel, MotionSettingsType, SETTINGS_CONFIGType } from '../logic/MotionModel'
+import { KeyFrameType, MMDModelBones, MotionModel, MotionSettingsType, SETTINGS_CONFIGType } from '../logic/MotionModel'
 import AkiraRadioButton from '../components/AkiraRadioButton'
 import { IsUUID } from '../logic/extentions'
 import { useSavedModel } from '../hookes/useSavedModel'
 import { InputNumber } from 'antd'
+import { AnimationControlUI } from '../components/AnimationControls/AnimationControlUI'
 
 
 export default function ScenePage() {
@@ -94,6 +95,7 @@ export default function ScenePage() {
                 }
                 if (MMDStates.MMDRuntime && MMDStates.MMDModel) {
                     MotionCap.motionCalculate(res)
+                    SetKeyFrames(MotionCap.keyframes)
                 }
             });
         }
@@ -119,6 +121,7 @@ export default function ScenePage() {
     const [SETTINGS_CONFIG, SetSETTINGS_CONFIG] = useState<SETTINGS_CONFIGType>({
         POSE_Y_SCALE: 0
     })
+    const [KeyFrames,SetKeyFrames] = useState<KeyFrameType[]>([])
     const [MMDStates, SetMMDStates] = useState<{
         MMDScene?: Scene,
         MMDRuntime?: MmdWasmRuntime,
@@ -224,8 +227,7 @@ export default function ScenePage() {
             mmdscene.ambientColor = new Color3(0, 0, 0);
             //const camera = new MmdCamera("mmdCamera", new Vector3(0, 10, 0), mmdscene);
             var camera = new FlyCamera("camera", new Vector3(0, 15, -35), mmdscene);
-            camera.rollCorrect = 10;
-            camera.bankedTurn = true;
+
             camera.bankedTurnLimit = Math.PI / 2;
             camera.bankedTurnMultiplier = 1;
             camera.attachControl(true);
@@ -307,12 +309,12 @@ export default function ScenePage() {
     useEffect(() => {
         MotionCap.SETTINGS_CONFIG = SETTINGS_CONFIG;
     }, [SETTINGS_CONFIG])
-    //
+
     useEffect(() => {
         setScene(scenes.find((el) => el.id == sceneId))
     }, [scenes, sceneId])
 
-    return (<div className="relative">
+    return (<div className="relative overflow-y-hidden">
         <canvas ref={convRef} style={{ width: "100%", height: "100vh" }} className="" />
         {/* Controls */}
         <div className="absolute m-2 font-bold text-[20px] flex gap-x-2 right-0 top-0">
@@ -410,22 +412,10 @@ export default function ScenePage() {
                 }}>
                     Record video
                 </AkiraButton>
-                <AkiraButton disabled className="w-full" onClick={() => { }}>
-                    Export to vmd
-                </AkiraButton>
-                <AkiraButton className="w-full" onClick={async () => {
-                    if (MMDStates.MMDScene && MMDStates.MMDModel) {
-                        GLTF2Export.GLTFAsync(MMDStates.MMDScene, "fileName",{
-                            removeNoopRootNodes: false,
-                        }).then((glb) => {
-                            glb.downloadFiles();
-                        });
-                    }
-
-                }}>
-                    Export to glTF
-                </AkiraButton>
+                
             </div>
+            
         </AkiraDrawer>
+        <AnimationControlUI KeyFrames={KeyFrames} MotionModelInstance={MotionCap}/>
     </div>)
 } 
