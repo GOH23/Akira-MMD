@@ -4,8 +4,8 @@
 [![Project Version](https://img.shields.io/badge/version-0.7.0-brightgreen)](https://github.com/GOH23/akira-mmd/releases)
 [![Open Issues](https://img.shields.io/github/issues/GOH23/akira-mmd)](https://github.com/GOH23/akira-mmd/issues)
 
-**Revolutionizing MMD animation with real-time motion capture powered by MediaPipe!**  
-Create professional animations in minutes, not hours. Perfect for both beginners and experienced MMD creators.
+**Revolutionizing MMD/Blender animation with real-time motion capture powered by MediaPipe!**  
+Create professional animations in minutes, not hours. Perfect for both beginners and experienced MMD/Blender creators.
 
 ![Akira MMD Interface Demo](https://github.com/user-attachments/assets/83243129-ba08-4e31-9714-8132b258efb3)
 
@@ -20,7 +20,7 @@ Create professional animations in minutes, not hours. Perfect for both beginners
 
 ### 🔥 Core Capabilities
 - Real-time motion capture from video input
-- MP4 export with embedded motion data
+- MP4/Gltf/Vmd export
 - Custom model import (BPMX formats)
 - Multi-scene workspace management
 
@@ -31,12 +31,12 @@ Create professional animations in minutes, not hours. Perfect for both beginners
 | Bone Structure Visualizer | ✅ Implemented |
 
 ### 🌐 International Support
-- **Current**: English (Full Support)
+- **Current**:
+  - English
+  - Russian
+  - Japanese
 - **Coming Soon**: 
-  - 🇷🇺 Russian (v0.7.2) 
-  - 🇯🇵 Japanese (v0.7.2)
   - 🇨🇳 Chinese (v0.8.0)
-
 ## ⚡ Quick Start Guide
 
 ### Prerequisites
@@ -66,7 +66,7 @@ npm run dev
 
 3. **Capture & Export**  
    - Preview motion capture results
-   - Export as MP4,Gltf,Vmd motion data
+   - Export as MP4,Gltf,Vmd formats
 
 ## 🖥️ Performance Tips
 - Enable "Hardware Acceleration" in browser settings
