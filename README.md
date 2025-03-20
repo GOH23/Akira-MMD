@@ -1,7 +1,7 @@
 # Akira - Next-Gen Motion Capture for MMD/Blender Community 
 
 [![GitHub license](https://img.shields.io/badge/License-Custom-ff69b4)](https://github.com/GOH23/akira-mmd/blob/main/LICENSE)
-[![Project Version](https://img.shields.io/badge/version-0.7.2-brightgreen)](https://github.com/GOH23/akira-mmd/releases)
+[![Project Version](https://img.shields.io/badge/version-0.7.2a-brightgreen)](https://github.com/GOH23/akira-mmd/releases)
 [![Open Issues](https://img.shields.io/github/issues/GOH23/akira-mmd)](https://github.com/GOH23/akira-mmd/issues)
 
 **Revolutionizing MMD/Blender animation with real-time motion capture powered by MediaPipe!**  
