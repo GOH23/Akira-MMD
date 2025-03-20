@@ -66,7 +66,7 @@ npm run dev
 
 3. **Capture & Export**  
    - Preview motion capture results
-   - Export as MP4 or raw motion data
+   - Export as MP4,Gltf,Vmd motion data
 
 ## 🖥️ Performance Tips
 - Enable "Hardware Acceleration" in browser settings
