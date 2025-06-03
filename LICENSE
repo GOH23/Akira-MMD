@@ -1,26 +1,21 @@
-Repository Name: Akira-MMD
+MIT License
 
-Copyright © 2025 GOH23
+Copyright (c) 2025 GOH23
 
-All Rights Reserved
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-1. License Grant:
-   This repository and its contents, including but not limited to source code, documentation, images, and other materials, are protected by copyright law. Unless otherwise stated in a separate license agreement, all intellectual property rights are owned by the author(s) of this repository.
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-2. Restrictions:
-   No part of this repository may be reproduced, distributed, or transmitted in any form or by any means, electronic or mechanical, including photocopying, recording, or by any information storage and retrieval system, without the prior written permission of the author(s).
-
-3. Contact Information:
-   For inquiries regarding licensing, permissions, or any other questions, please contact GOH23 at ___.
-
-4. No Implied Licenses:
-   Nothing in this license shall be deemed to grant any rights to any third parties or to imply any relationship between the author(s) and the recipients or users of this repository.
-
-5. No Warranty:
-   This repository is provided on an "as-is" basis, without any warranties or conditions, express or implied, including, but not limited to, warranties of merchantability, fitness for a particular purpose, or non-infringement.
-
-6. Limitation of Liability:
-   In no event shall the author(s) be liable for any claim, damages, or other liability, whether in an action of contract, tort, or otherwise, arising from, out of, or in connection with this repository or the use or other dealings in this repository.
-
-This license shall be governed by and construed in accordance with the laws of Russian Federation, without regard to choice of law principles
-
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
