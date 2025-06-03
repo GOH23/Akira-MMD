@@ -73,6 +73,3 @@ npm run dev
 - Use Chrome/Edge for best WebGL performance
 - Recommended resolution: 1280x720 for real-time preview
 - Close background apps during capture sessions
-### Future Plans
-- 📱 Progressive Web App (PWA) support
-- 🖥️ Desktop app (Electron-based)
