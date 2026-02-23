@@ -1,5 +1,5 @@
 # Akira MMD - Next-Gen Motion Capture for MMD Community 
-
+# New update soon
 [![GitHub license](https://img.shields.io/badge/License-Custom-ff69b4)](https://github.com/GOH23/akira-mmd/blob/main/LICENSE)
 [![Project Version](https://img.shields.io/badge/version-0.7.1b-brightgreen)](https://github.com/GOH23/akira-mmd/releases)
 [![Open Issues](https://img.shields.io/github/issues/GOH23/akira-mmd)](https://github.com/GOH23/akira-mmd/issues)
